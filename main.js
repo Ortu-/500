@@ -367,13 +367,75 @@ function App_FiveHundred() {
 					var thisKittyCard = g.deck[i];
 					
 					//take trumps, aces in kitty for offsuit in hand with least counts. take king if more than 0.5 count (any 1 card) of king's suit.
+					// !!! probably should split the suit count into both 'count' and 'weight' properties, as the weight is good for bidding, but a raw qty count would be best here.
 					if(thisKittyCard.suit == thisRound.trumpSuit || thisKittyCard.value == 14 || (thisKittyCard.value == 13 && sortedCount[app.getSortKeyIndex(sortedCount, thisKittyCard.suit)][1] > 0.5)){
 					
-						//we want this card, pick a hand card to trade.
-						
-						// !!! stub !!!
+						//we want this card, pick a hand card to trade.						
+						for(var s = 0; s < 3 ; s++){
+							
+							for(var hc in thisPlayer.hand){
+								var handCard = thisPlayer.hand[hc];
+								
+								if(!madeTrade){
+									if(handCard.suit == sortedCount[s][0] && handCard.suit != thisRound.trumpSuit && handCard.value != 14){
+										//use this card, make the trade
+										var tSuit = thisKittyCard.suit;
+										var tVal = thisKittyCard.value;
+										
+										thisKittyCard.suit = handCard.suit;
+										thisKittyCard.value = handCard.value;
+										
+										handCard.suit = tSuit;
+										handCard.value = tValue;
+										
+										//resort hand
+										thisPlayer.sortHand();
+										
+										madeTrade = true;
+									}
+								}
+								
+							}
+							
+						}
 					
 					}
+					else{
+						
+						//trade offsuit with count <= 1.0 for offsuit with higher count.
+						for(var s = 0; s < 3; s++){
+							if(sortedCount[s][1] <= 1.0 && sortedCount[s][0] != thisKittyCard.suit && sortedCount[app.getSortKeyIndex(sortedCount, thisKittyCard.suit)][1] > 0.5){
+								
+								//we want this card, pick a hand card to trade
+								for(var hc in thisPlayer.hand){
+									var handCard = hc;
+									
+									if(!madeTrade){
+										if(handCard.suit == sortedCount[s][0] && handCard.suit != trumpSuit && handCard.value != 14 && sortedCount[app.getSortKeyIndex(sortedCount, handCard.suit)][1] > 0.5){
+											//use this card, make the trade
+											var tSuit = thisKittyCard.suit;
+											var tVal = thisKittyCard.value;
+											
+											thisKittyCard.suit = handCard.suit;
+											thisKittyCard.value = handCard.value;
+											
+											handCard.suit = tSuit;
+											handCard.value = tValue;
+											
+											//resort hand
+											thisPlayer.sortHand();
+											
+											madeTrade = true;											
+										}
+									}
+									
+								}
+								
+							}
+						}
+						
+					}
+					
 				}
 			
 			}
