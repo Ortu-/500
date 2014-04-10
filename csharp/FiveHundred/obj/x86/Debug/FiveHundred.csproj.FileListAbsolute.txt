@@ -1,0 +1,5 @@
+C:\cProj\FiveHundred\FiveHundred\bin\Debug\FiveHundred.exe
+C:\cProj\FiveHundred\FiveHundred\bin\Debug\FiveHundred.pdb
+C:\cProj\FiveHundred\FiveHundred\obj\x86\Debug\ResolveAssemblyReference.cache
+C:\cProj\FiveHundred\FiveHundred\obj\x86\Debug\FiveHundred.exe
+C:\cProj\FiveHundred\FiveHundred\obj\x86\Debug\FiveHundred.pdb
