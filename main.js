@@ -18,7 +18,9 @@ function App_FiveHundred() {
 			this.baseSchedule.push(i + " No-Trump");
 		}
 
-		
+	this.phase = "";
+	
+	
 		
 	//focus handler --------------------------------------------------------
 	
@@ -30,6 +32,7 @@ function App_FiveHundred() {
 	
 	this.bindHandlers = function(){
 		
+		//Enter Key
 		$(document).on("keydown", function (e) {
 			if (e.which === 13) {
 				//$('#' + currentFocus).click();
@@ -38,7 +41,33 @@ function App_FiveHundred() {
 				$('#main').html('starting');
 				var thisGame = new app.Game('Easy', false);
 			}
-		});			
+		});	
+		
+		//Card Clicks
+		$(function(){
+			$(".card").click(function(e) {
+				
+				switch(app.phase){
+					case: "kitty":
+					
+						// !!! stub !!! execute trade between kitty and hand.
+					
+						break;
+						
+					case: "play":
+						
+						// !!! stub !!! play a card from hand to current trick.
+						
+						break;
+						
+					default:
+						//ignore.
+						break;
+						
+				}
+				
+			});
+		});		
 		
 	}
 	
@@ -156,7 +185,8 @@ function App_FiveHundred() {
 		var thisRound = this;
 		
 		this.passCount = 0;
-		this.seatCount = 1;			
+		this.seatCount = 1;	
+		this.trickCount = 0;
 		this.topBidAmount = 0;
 		this.topBidSuit = "";
 		this.topBidPlayer = -1;
@@ -188,8 +218,10 @@ function App_FiveHundred() {
 		//Define GameRound Methods - - - - - - - - - - - - - 
 		
 		this.runBidPhase = function(g){
+		
+			app.phase = "bid";
 			
-			var p = app.wrapValue(0, 5, g.dealer + thisRound.seatCount);
+			var p = app.wrapValue(0, 4, g.dealer + thisRound.seatCount);
 			var thisPlayer = g.players[p];
 			
 			//if player hasn't passed, make a bid
@@ -233,8 +265,7 @@ function App_FiveHundred() {
 					});
 					
 					//bind player bid select callback handler
-					$('#select-playerBid').on('change', function(){ 
-					// !!! may want to change this to execute on a submit button press to prevent accidental bids.
+					$('#submit-playerBid').on('click', function(){ 
 
 						//evaluate bid
 						var playerBid = $(this).val();						
@@ -311,6 +342,9 @@ function App_FiveHundred() {
 						thisRound.setBowers(g.deck[c]);
 					}
 					
+					//reset seat count to use for play phase
+					thisRound.seatCount = 0;
+					
 					//advance to team selection
 					thisRound.runKittyPhase(g);
 					
@@ -331,6 +365,10 @@ function App_FiveHundred() {
 		
 		
 		this.runKittyPhase = function(g){
+		
+			app.phase = "kitty";
+			
+			//Allow Chief to trade hand cards for kitty cards.
 			
 			var thisPlayer = g.players[thisRound.chief];
 			
@@ -375,7 +413,7 @@ function App_FiveHundred() {
 							
 							for(var hc in thisPlayer.hand){
 								var handCard = thisPlayer.hand[hc];
-								
+
 								if(!madeTrade){
 									if(handCard.suit == sortedCount[s][0] && handCard.suit != thisRound.trumpSuit && handCard.value != 14){
 										//use this card, make the trade
@@ -425,7 +463,7 @@ function App_FiveHundred() {
 											//resort hand
 											thisPlayer.sortHand();
 											
-											madeTrade = true;											
+											madeTrade = true;										
 										}
 									}
 									
@@ -437,56 +475,280 @@ function App_FiveHundred() {
 					}
 					
 				}
+				
+				//all 3 kitty cards have been evaluated and desired trades are made, proceed to Team Phase
+				
+				thisRound.runTeamPhase(g);
 			
 			}
 			else{
 			
 				//Human player, allow player to choose cards to swap and bind submit callback
+				// execute the card swaps in the general card onclick handler based on phase state.
 				
 				$('#btn-kitty-submit').on('click', function(){
 				
-					// !!! stub !!! execute the indicated card swaps then proceed to updateKittyPhase
-				
+					thisRound.runTeamPhase(g);
+					
 				});
 				
 			}
 			
-		}
-		
-		
-		this.updateKittyPhase = function(){
-			
-			// !!! stub !!!
-					
 		}
 
 
 		
 		this.runTeamPhase = function(g){
 			
-			// !!! stub !!!
+			app.phase = "team";
 			
-		}
-		
-		
-		this.updateTeamPhase = function(){
+			//Allow Chief to choose teammates.
 			
-			// !!! stub !!!
+			var thisPlayer = g.players[thisRound.chief];
+			
+			//AI logic
+			
+			switch(thisPlayer.ai){
+			
+				case "Easy":
+				
+					//pick Vice 1 randomly
+					thisRound.vice1 = thisRound.chief;
+					while(thisRound.vice1 == thisRound.chief){
+						thisRound.vice1 = app.getRnd(0, 4);
+					}
 					
+					//Vice 2
+					if(thisRound.viceLimit == 2){
+						
+						//pick randomly
+						thisRound.vice2 = thisRound.chief;
+						while(thisRound.vice2 == thisRound.chief || thisRound.vice2 == thisRound.vice1){
+							thisRound.vice2 = app.getRnd(0, 4);
+						}				
+						
+					}
+				
+					break;
+					
+				case "Hard":
+				
+                    //pick Vice 1 by criteria: bids made, play order, points etc
+                    
+					/*
+                    //Do I have RB?
+                    if()
+                    {
+                        //Do I have LB?
+                        if()
+                        {
+                            //Do I have JK?
+                            if()
+                            {
+                                //Did anyone bid an opposite suit? (if trump red => any black?)
+                                if()
+                                {
+                                    //pick highest opposite bidder
+                                }
+                            }
+                            else
+                            {
+                                //Did anyone bid trump suit?
+                                if()
+                                {
+                                    //pick highest trump bidder
+
+                                }
+                            }
+                        }
+                        else
+                        {
+                            //Did anyone bid sister suit? (if trump heart => any diamond?)
+                            if()
+                            {
+                                //pick highest sister bidder
+
+                            }
+                            else
+                            {
+                                //Did anyone bid trump suit?
+                                if()
+                                {
+                                    //pick highest trump bidder
+
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        //Did anyone bid trump suit?
+                        if()
+                        {
+                            //pick highest trump bidder
+
+                        }
+                        else
+                        {
+                            //Did anyone bid sister suit?
+                            if()
+                            {
+                                //pick highest sister bidder
+
+                            }
+                        }
+                    }
+                    //If no one picked, did anyone else bid?
+                    if()
+                    {
+                        //pick highest bidder
+
+                    }
+                    else
+                    {
+                        //pick random
+
+                    }*/
+					
+					//Vice 2
+					if(thisRound.viceLimit == 2){
+
+						// !!! stub !!!
+					
+					}					
+				
+					break;
+			
+				case "Human":
+			
+					//Human player, allow player to choose teammates up to allowed max and bind callbacks
+					
+					//Player Click
+					$(function(){
+						$(".player").click(function(e) {
+							
+							$(".player").removeClass("team-select");
+							$(this).addClass("team-select");
+							
+						});
+					});	
+					
+					//Confirm
+					$('#btn-team-submit').on('click', function(){
+					
+						//lock in selection !!! add handling for no selection.
+						
+						var p = $(".team-select:first").attr("id");
+							p = p.substr(p.length - 1);					
+						
+						if(thisRound.viceLimit == 1 || thisRound.vice1 == -1){
+
+							//set vice1
+							thisRound.vice1 = parseInt(p);
+							
+						}
+						else if(thisRound.viceLimit == 2){
+							
+							//set vice2
+							thisRound.vice2 = parseInt(p);
+							
+						}
+						
+						$(".player").removeClass("team-select");
+						
+						//check for all allowed selections made.
+						if((thisRound.viceLimit == 1 && thisRound.vice1 > -1) || (thisRound.viceLimit == 2 && thisRound.vice2 > -1)){
+							thisRound.runPlayPhase(g);
+						}
+						
+					});
+					
+					//Choose No Team / Go it alone
+					$('#btn-team-skip').on('click', function(){
+						thisRound.viceLimit = 0;
+						thisRound.runPlayPhase(g);
+					});
+					
+					break;
+				
+			}
+			
 		}
 		
 		
 		
 		this.runPlayPhase = function(g){
 			
-			// !!! stub !!!
+			app.phase = "play";
+			
+			//start a new trick
+					
+			var thisTrick = new app.Trick();
+			thisRound.trickCount++;
+			
+			//each round consists of 10 tricks, play starts with winner of previous trick, or left of dealer on trick 1
+			
+			thisTrick.leadPlayer = thisRound.nextLeadPlayer;
+			
+			//each player must play a card to the trick
+			var p = app.wrapValue(0, 4, thisTrick.leadPlayer + thisRound.seatCount);
+			var thisPlayer = g.players[p];
+						
+			if(thisPlayer.ai != "Human"){
+				
+				thisPlayer.playCard(g, thisRound, thisTrick);
+				
+				thisRound.updatePlayPhase(g, thisTrick);
+				
+			}
+			else{
+			
+				//let the player choose a card
+				
+				// !!! stub !!!
+				
+			}	
 			
 		}
 		
 		
-		this.updatePlayPhase = function(){
+		this.updatePlayPhase = function(g, t){
 			
-			// !!! stub !!!
+			//check if trick is complete
+			if(thisRound.seatCount >= 4){
+			
+				//check if round is complete
+				if(thisRound.trickCount < 10){
+					
+					//trick is complete but round not finished
+					
+					//process trick results
+					g.players[t.topPlayer].tricks++;
+					thisRound.nextLeadPlayer = t.topPlayer;
+					
+					//start a new trick
+					thisRound.seatCount = 0;
+					thisRound.runPlayPhase(g);
+				
+				}
+				else{
+					
+					//round is complete
+					
+					//did chief make the bid?
+					
+					// !!! stub !!!
+					
+				}
+				
+			}
+			else{
+			
+				//advance the seat and continue the trick
+				thisRound.seatCount++;
+				thisRound.runPlayPhase(g);
+				
+			}
 					
 		}
 		
