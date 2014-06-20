@@ -1,0 +1,97 @@
+<!doctype html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<link rel="SHORTCUT ICON" href="img/ui/favicon.png"/>
+		<script src="lib/jquery-1.9.1.min.js"></script>
+		<style type="text/css">
+			html{
+				background-color:#000;
+				color:#fff;
+			}
+			#field{
+				width:100%;
+				height:768px;
+				background-image:url("img/background.jpg");
+				background-repeat:repeat-x;
+				position:absolute;
+				margin:auto;
+				top:0px;
+				left:0px;
+				right:0px;
+				bottom:0px;
+				z-index:0;
+			}
+			
+			#players-wrap{
+				width:940px;
+				margin:0 auto;
+				position:relative;
+			}		
+			#in-play{
+				width:940px;
+				height:340px;
+				margin:0 auto;
+				position:relative;
+			}
+			#my-wrap{
+				width:940px;
+				margin:0 auto;
+				position:relative;
+			}	
+			
+			.card{
+				width:80px;
+				height:116px;
+				margin:0px;
+				padding:0px;
+				position:absolute;
+				top:0px;
+				left:0px;
+				z-index:100;
+			}
+			
+			.player{
+				width:230px;
+				height:200px;
+				border:1px solid #777;
+				display:inline-block;
+				z-index:50;
+				position:relative;
+			}
+			.my-player{
+				width:938px;
+				height:200px;
+				border:1px solid #777;
+				display:inline-block;
+				z-index:50;
+				position:relative;
+			}			
+		</style>
+	</head>
+	<body>
+		<div id="main">Initialized</div>
+		<div id="field">
+			<div id="players-wrap">
+				<span id="player-0" class="player" >P1</span>
+				<span id="player-1" class="player" >P2</span>
+				<span id="player-2" class="player" >P3</span>
+				<span id="player-3" class="player" >P4</span>
+			</div>
+			<div id="in-play"></div>
+			<div id="my-wrap">
+				<span id="player-4" class="my-player" >P5</span>
+			</div>
+			<div id="panel-bidSchedule">
+			
+				<select id="select-playerBid"></select>
+			</div>
+		</div>
+
+		<!--link to controller-->
+		<script src="main.js"></script>
+			<script type="text/javascript">
+				var a = new App_FiveHundred({writeDebug: true, skin: "pinup"});
+			</script>		
+	</body>
+</html>

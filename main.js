@@ -6,6 +6,8 @@ function App_FiveHundred(params) {
 	//App Init -------------------------------------------------------------
 	
 	var app = this;
+	
+	this.skin = params.skin;
 
 	this.suitVal = {"Spades": 1, "Clubs": 2, "Diamonds": 3, "Hearts": 4, "Joker": 5};
 	
@@ -21,6 +23,31 @@ function App_FiveHundred(params) {
 	this.phase = "";
 	
 	
+	//build ui elements -------------------------------------------------------
+	
+	this.buildElements = function(){
+
+		//cards
+		for(var v = 2; v <= 16; v++){
+			var t = $('#field').html();
+			t += '<div id="card-S' + v + '" class="card" ><img src="img/cards/'+app.skin+'/s'+v+'.jpg" /></div>';
+			t += '<div id="card-C' + v + '" class="card" ><img src="img/cards/'+app.skin+'/c'+v+'.jpg" /></div>';
+			t += '<div id="card-D' + v + '" class="card" ><img src="img/cards/'+app.skin+'/d'+v+'.jpg" /></div>';
+			t += '<div id="card-H' + v + '" class="card" ><img src="img/cards/'+app.skin+'/h'+v+'.jpg" /></div>';
+			$('#field').html(t);
+			
+			$('#card-S' + v).hide();
+			$('#card-C' + v).hide();
+			$('#card-D' + v).hide();
+			$('#card-H' + v).hide();
+		}
+		
+		var t = $('#field').html();
+		t += '<div id="card-J17" class="card" ><img src="img/cards/'+app.skin+'/j17.jpg" /></div>';
+		$('#field').html(t);	
+		
+		$('#card-J17').hide();
+	}
 	
 	//input handler --------------------------------------------------------
 	
@@ -41,6 +68,8 @@ function App_FiveHundred(params) {
 		$(function(){
 			$(".card").click(function(e) {
 				
+				var cid = $(this).attr('id').substr(5, 2);
+				
 				switch(app.phase){
 					case "kitty":
 					
@@ -55,7 +84,9 @@ function App_FiveHundred(params) {
 						break;
 						
 					default:
+					
 						//ignore.
+						
 						break;
 						
 				}
@@ -137,7 +168,7 @@ function App_FiveHundred(params) {
 				var thisPlayer = Math.floor(count / 10);
 				
 				if(thisPlayer < 5){
-					g.players[thisPlayer].hand.push(new app.Card(thisCard.suit, thisCard.value));
+					g.players[thisPlayer].hand.push(new app.Card(thisCard.suit, thisCard.value));	
 					count++;
 				}
 			}
@@ -145,7 +176,7 @@ function App_FiveHundred(params) {
 			//sort the hands
 			for(var p = 0; p < g.players.length; p++){
 				var thisPlayer = g.players[p];
-				thisPlayer.sortHand();
+				thisPlayer.sortHand("weight");
 			}
 			
 		}
@@ -166,25 +197,25 @@ function App_FiveHundred(params) {
 		}
 		
 		//AI only play 
-		for (var i = 0; i < 5; i++){
+		/*for (var i = 0; i < 5; i++){
 			this.players[i] = new app.Player(aiOption[app.getRnd(0, aiOption.length - 1)]);
 
 			app.log("Made Player: " + i + " (" + g.players[i].name + ")");
-		}
+		}*/
 		
 		
 		//Single player
-		/*
-		for(var i = 0; i < 4; i++){
-			this.players[i] = new app.Player(aiOption[app.getRnd(0, aiOption.length)]);
 		
+		for (var i = 0; i < 4; i++){
+			this.players[i] = new app.Player(aiOption[app.getRnd(0, aiOption.length - 1)]);
+
 			app.log("Made Player: " + i + " (" + g.players[i].name + ")");
 		}
 
 		this.players[4] = new app.Player("Human");
 		
 		app.log("Made Player: 4 (" + g.players[4].name + ")");
-		*/
+		
 		
 		//start round 1
 		var thisRound = new app.GameRound(g);
@@ -399,7 +430,7 @@ function App_FiveHundred(params) {
 					app.log("\r\nResorting all hands...");
 					for(var p = 0; p < g.players.length; p++){
 						var thisPlayer = g.players[p];
-						thisPlayer.sortHand();
+						thisPlayer.sortHand("weight");
 					}					
 					
 					//reset seat count to use for play phase
@@ -448,7 +479,7 @@ function App_FiveHundred(params) {
 				for(var i = 50; i < 53; i++){			
 				
 					//make a sub-copy that we can alter without affecting the original 
-					var newCount = Object.create(thisPlayer.suitCount);
+					var newCount = Object.create(thisPlayer.suitWeight);
 					
 					//sort cards to prioritize keeps and drops:
 					//check for low count suits to trade off, ignore aces in counts because we want to keep them in hand.
@@ -497,7 +528,7 @@ function App_FiveHundred(params) {
 										handCard.value = tValue;
 										
 										//resort hand
-										thisPlayer.sortHand();
+										thisPlayer.sortHand("weight");
 										
 										madeTrade = true;
 									}
@@ -534,7 +565,7 @@ function App_FiveHundred(params) {
 											handCard.value = tValue;
 											
 											//resort hand
-											thisPlayer.sortHand();
+											thisPlayer.sortHand("weight");
 											
 											madeTrade = true;										
 										}
@@ -606,7 +637,21 @@ function App_FiveHundred(params) {
 					
 					}
 				
-					thisRound.runPlayPhase(g);
+					//start a new trick
+					app.log("\r\nStarting Trick " + (thisRound.trickCount + 1));
+					
+					var thisTrick = new app.Trick();
+					thisRound.trickCount++;
+					
+					//each round consists of 10 tricks, play starts with winner of previous trick, or left of dealer on trick 1
+					
+					thisTrick.leadPlayer = thisRound.nextLeadPlayer;
+					
+					app.log("Player " + thisTrick.leadPlayer + " leads the trick");					
+					
+					thisRound.seatCount = 0;
+					
+					thisRound.runPlayPhase(g, thisTrick);
 					
 					break;
 					
@@ -623,7 +668,19 @@ function App_FiveHundred(params) {
 					
 					}					
 				
-					//thisRound.runPlayPhase(g);
+					//start a new trick
+					app.log("\r\nStarting Trick " + (thisRound.trickCount + 1));
+					
+					var thisTrick = new app.Trick();
+					thisRound.trickCount++;
+					
+					thisTrick.leadPlayer = thisRound.nextLeadPlayer;
+					
+					app.log("Player " + thisTrick.leadPlayer + " leads the trick");					
+					
+					thisRound.seatCount = 0;
+					
+					thisRound.runPlayPhase(g, thisTrick);
 				
 					break;
 			
@@ -685,22 +742,9 @@ function App_FiveHundred(params) {
 
 
 		
-		this.runPlayPhase = function(g){
+		this.runPlayPhase = function(g, thisTrick){
 			
 			app.phase = "play";
-			
-			//start a new trick
-			
-			app.log("\r\nStarting Trick " + (thisRound.trickCount + 1));
-			
-			var thisTrick = new app.Trick();
-			thisRound.trickCount++;
-			
-			//each round consists of 10 tricks, play starts with winner of previous trick, or left of dealer on trick 1
-			
-			thisTrick.leadPlayer = thisRound.nextLeadPlayer;
-			
-			app.log("Player " + thisTrick.leadPlayer + " leads the trick");
 			
 			//each player must play a card to the trick
 			var p = app.wrapValue(0, 4, thisTrick.leadPlayer + thisRound.seatCount);
@@ -708,9 +752,9 @@ function App_FiveHundred(params) {
 						
 			if(thisPlayer.ai != "Human"){
 				
-				//thisPlayer.playCard(g, thisRound, thisTrick);
+				thisPlayer.playCard(g, thisRound, thisTrick);
 				
-				//thisRound.updatePlayPhase(g, thisTrick);
+				thisRound.updatePlayPhase(g, thisTrick);
 				
 			}
 			else{
@@ -727,6 +771,8 @@ function App_FiveHundred(params) {
 
 		this.updatePlayPhase = function(g, t){
 			
+			app.log("update play: trick "+thisRound.trickCount + " seat: " + thisRound.seatCount);
+			
 			//check if trick is complete
 			if(thisRound.seatCount >= 4){
 			
@@ -734,14 +780,25 @@ function App_FiveHundred(params) {
 				if(thisRound.trickCount < 10){
 					
 					//trick is complete but round not finished
+					app.log("trick is complete, but round continues");
+					app.log("player " + t.topPlayer + " took the trick");
 					
 					//process trick results
 					g.players[t.topPlayer].tricks++;
 					thisRound.nextLeadPlayer = t.topPlayer;
 					
 					//start a new trick
+					app.log("\r\nStarting Trick " + (thisRound.trickCount + 1));
+					
+					t = new app.Trick();
+					thisRound.trickCount++;
+					
+					t.leadPlayer = thisRound.nextLeadPlayer;
+					
+					app.log("Player " + t.leadPlayer + " leads the trick");					
+					
 					thisRound.seatCount = 0;
-					thisRound.runPlayPhase(g);
+					thisRound.runPlayPhase(g, t);
 				
 				}
 				else{
@@ -754,6 +811,7 @@ function App_FiveHundred(params) {
 					var teamTricks = g.players[thisRound.chief].tricks;
 					if(thisRound.vice1 > -1){ teamTricks += g.players[thisRound.vice1].tricks; }
 					if(thisRound.vice2 > -1){ teamTricks += g.players[thisRound.vice2].tricks; }
+					app.log("\r\nChief's team took " + teamTricks + " tricks");
 					
 					//get team point change
 					var pointChange = thisRound.getBidPoints(thisRound.topBidSuit, thisRound.topBidAmount);
@@ -775,6 +833,9 @@ function App_FiveHundred(params) {
 						if(g.players[p].score >= 500){
 							winners.push("Player "+p);
 						}
+						
+						app.log("Player " + p + " score: " + g.players[p].score);
+						
 					}
 					
 					//Does the game continue?
@@ -782,13 +843,17 @@ function App_FiveHundred(params) {
 						
 						//we have a winner, game is over
 						
+						app.log("\r\nGame is complete in " + g.roundCount + " rounds.\r\n");
+						//break;
+						
 						//display winners and offer to start a new game
+						
 						// !!! stub !!!
 						
 					}
 					else{
-						
 						//start another round
+						app.log("\r\nNo winner, start a new round\r\n");
 						g.thisRound = new app.GameRound(g);
 					}
 					
@@ -796,11 +861,10 @@ function App_FiveHundred(params) {
 				
 			}
 			else{
-			
 				//advance the seat and continue the trick
 				thisRound.seatCount++;
-				thisRound.runPlayPhase(g);
-				
+				app.log("trick continues with seat " + thisRound.seatCount);
+				thisRound.runPlayPhase(g, t);
 			}
 					
 		}
@@ -893,10 +957,12 @@ function App_FiveHundred(params) {
 
 		this.foeCanTrump = function(suit, myID, myTeam1, myTeam2){
 			
+			// !!! this needs to add a check to see if the opponent has played to the current trick yet. It doesn't matter if they are out of lead suit if they have already dropped a card.
+			
 			var foeOut = false;
 			
 			for(var p in g.players){
-				if(thisRound.outOfSuit[suit][p.id]){
+				if(thisRound.outOfSuit[suit][p.id] && !thisRound.outOfSuit[thisRound.trumpSuit][p.id]){
 					if(p.id != myTeam1 && p.id != myTeam2 && p.id != myID){
 						foeOut = true;
 					}
@@ -936,7 +1002,7 @@ function App_FiveHundred(params) {
 		//get the bids
 		app.log("\r\nStarting the Bid...");
 		
-		thisRound.runBidPhase(g);
+		//thisRound.runBidPhase(g);
 		
 	}
 		
@@ -1011,6 +1077,8 @@ function App_FiveHundred(params) {
 		
 		this.suit = s;
 		this.value = v;
+		
+		this.eid = "#card-" + s.substr(0,1) + v;
 		
 		
 		
@@ -1127,13 +1195,14 @@ function App_FiveHundred(params) {
 		this.bidSuit = "";
 		this.bidAmount = 0;
 		
-		this.suitCount = {"Spades": 0.0, "Clubs": 0.0, "Diamonds": 0.0, "Hearts": 0.0 };
+		this.suitWeight = {"Spades": 0.0, "Clubs": 0.0, "Diamonds": 0.0, "Hearts": 0.0 };
+		this.suitCount = {"Spades": 0, "Clubs": 0, "Diamonds": 0, "Hearts": 0 };
 		
 		
 		
 		//Define Player Methods - - - - - - - - - - - - - 
 
-		this.sortHand = function(){
+		this.sortHand = function(mode){
 		
 			var t = "\r\nPlayer " + thisPlayer.id + "\r\nHand: ";
 			for(var c = 0; c < thisPlayer.hand.length; c++){
@@ -1141,16 +1210,26 @@ function App_FiveHundred(params) {
 			}
 			app.log(t);		
 		
-			thisPlayer.getSuitCount();
-		
-			app.log("Eval: S: " + thisPlayer.suitCount.Spades + ", C: " + thisPlayer.suitCount.Clubs + ", D: " + thisPlayer.suitCount.Diamonds + ", H: " + thisPlayer.suitCount.Hearts);
+			thisPlayer.getSuitWeight();
+			
 			//sort by values, then by suits
 			thisPlayer.hand.sort(function(a, b){ return a.value - b.value; });
 			thisPlayer.hand.sort(function(a, b){ return app.suitVal[a.suit] - app.suitVal[b.suit]; });
 			
-			//if AI, then by weighted count of suit
-			if(thisPlayer.aiMode != "Human"){
-				thisPlayer.hand.sort(function(a, b){ return thisPlayer.suitCount[a.suit] - thisPlayer.suitCount[b.suit]; });
+			//if AI, then by count mode
+			if(mode == "weight"){
+				//weighted count of suit
+				app.log("Eval: S: " + thisPlayer.suitWeight.Spades + ", C: " + thisPlayer.suitWeight.Clubs + ", D: " + thisPlayer.suitWeight.Diamonds + ", H: " + thisPlayer.suitWeight.Hearts);
+				if(thisPlayer.ai != "Human"){
+					thisPlayer.hand.sort(function(a, b){ return thisPlayer.suitWeight[a.suit] - thisPlayer.suitWeight[b.suit]; });
+				}
+			}
+			else{
+				//raw count
+				app.log("Eval: S: " + thisPlayer.suitCount.Spades + ", C: " + thisPlayer.suitCount.Clubs + ", D: " + thisPlayer.suitCount.Diamonds + ", H: " + thisPlayer.suitCount.Hearts);
+				if(thisPlayer.ai != "Human"){
+					thisPlayer.hand.sort(function(a, b){ return thisPlayer.suitCount[a.suit] - thisPlayer.suitCount[b.suit]; });
+				}
 			}
 			
 			var t = "Sort: ";
@@ -1158,12 +1237,35 @@ function App_FiveHundred(params) {
 				t += thisPlayer.hand[c].toString() + ", ";
 			}
 			app.log(t);				
-					
+			
+			//update display
+			var playerElement = $('#player-' + thisPlayer.id);
+			var playerOffset = playerElement.offset();
+			
+			for(var c = 0; c < thisPlayer.hand.length; c++){
+				var thisCard = thisPlayer.hand[c];
+			
+				var cardElement = $(thisCard.eid);
+				cardElement.css('z-index', 100 + c);
+				
+				if(thisPlayer.ai != "Human"){
+					var posx = 8 + (15 * c);
+					var posy = 68 + (1 * c);
+					app.flipCard(thisCard.eid, "down"); 
+				}
+				else{
+					var posx = 10 + ((cardElement.width() + 13) * c);
+					var posy = 74;				
+				}
+				
+				app.pasteCard(thisCard.eid, "#player-"+thisPlayer.id, posx, posy);
+			}
+			
 		}
 		
 		
 		
-		this.getSuitCount = function(){
+		this.getSuitWeight = function(){
 			
 			//This will evaluate the number of cards for each suit in the player's hand.
 			//It is used by the AI to determine bidding.
@@ -1171,7 +1273,8 @@ function App_FiveHundred(params) {
 			//The current cut point is 8, if this is lowered, the AI is more likely to make higher bids, but will be less likely to be able to meet the contract.
 			
 			//reset the count
-			thisPlayer.suitCount = {"Spades": 0.0, "Clubs": 0.0, "Diamonds": 0.0, "Hearts": 0.0 };
+			thisPlayer.suitWeight = {"Spades": 0.0, "Clubs": 0.0, "Diamonds": 0.0, "Hearts": 0.0 };
+			thisPlayer.suitCount = {"Spades": 0, "Clubs": 0, "Diamonds": 0, "Hearts": 0 };
 			
 			for(var c in thisPlayer.hand){
 				
@@ -1179,11 +1282,13 @@ function App_FiveHundred(params) {
 				
 				if(thisCard.suit != "Joker"){
 					if(thisCard.value <= 8){
-						thisPlayer.suitCount[thisCard.suit] += 0.5;
+						thisPlayer.suitWeight[thisCard.suit] += 0.5;
 					}
 					else{
-						thisPlayer.suitCount[thisCard.suit] += 1.0;
+						thisPlayer.suitWeight[thisCard.suit] += 1.0;
 					}
+					
+					thisPlayer.suitCount[thisCard.suit] += 1;
 				}
 				
 			}
@@ -1195,9 +1300,9 @@ function App_FiveHundred(params) {
 		this.getBid = function(topBid, topSuit){
 			
 			//analyze hand 
-			thisPlayer.getSuitCount();
+			thisPlayer.getSuitWeight();
 			
-			var trumpCount = {"Spades": thisPlayer.suitCount.Spades, "Clubs": thisPlayer.suitCount.Clubs, "Diamonds": thisPlayer.suitCount.Diamonds, "Hearts": thisPlayer.suitCount.Hearts };
+			var trumpWeight = {"Spades": thisPlayer.suitWeight.Spades, "Clubs": thisPlayer.suitWeight.Clubs, "Diamonds": thisPlayer.suitWeight.Diamonds, "Hearts": thisPlayer.suitWeight.Hearts };
 			
 			for(var c in thisPlayer.hand){
 			
@@ -1207,55 +1312,55 @@ function App_FiveHundred(params) {
 					case "Spades":
 						if(thisCard.value == 11){
 							//Sister Suit Jack = potential Bower
-							trumpCount.Clubs += 1.0
+							trumpWeight.Clubs += 1.0
 						}
 						if(thisCard.value == 14){
 							//an Ace is ace! count offsuits, but weighted down
-							trumpCount.Clubs += 0.5;
-							trumpCount.Diamonds += 0.5;
-							trumpCount.Hearts += 0.5;
+							trumpWeight.Clubs += 0.5;
+							trumpWeight.Diamonds += 0.5;
+							trumpWeight.Hearts += 0.5;
 						}
 						break;
 						
 					case "Clubs":
 						if(thisCard.value == 11){
-							trumpCount.Spades += 1.0
+							trumpWeight.Spades += 1.0
 						}
 						if(thisCard.value == 14){
-							trumpCount.Spades += 0.5;
-							trumpCount.Diamonds += 0.5;
-							trumpCount.Hearts += 0.5;
+							trumpWeight.Spades += 0.5;
+							trumpWeight.Diamonds += 0.5;
+							trumpWeight.Hearts += 0.5;
 						}
 						break;
 
 					case "Diamonds":
 						if(thisCard.value == 11){
-							trumpCount.Hearts += 1.0
+							trumpWeight.Hearts += 1.0
 						}
 						if(thisCard.value == 14){
-							trumpCount.Spades += 0.5;
-							trumpCount.Clubs += 0.5;
-							trumpCount.Hearts += 0.5;
+							trumpWeight.Spades += 0.5;
+							trumpWeight.Clubs += 0.5;
+							trumpWeight.Hearts += 0.5;
 						}
 						break;
 
 					case "Hearts":
 						if(thisCard.value == 11){
-							trumpCount.Diamonds += 1.0
+							trumpWeight.Diamonds += 1.0
 						}
 						if(thisCard.value == 14){
-							trumpCount.Spades += 0.5;
-							trumpCount.Clubs += 0.5;
-							trumpCount.Diamonds += 0.5;
+							trumpWeight.Spades += 0.5;
+							trumpWeight.Clubs += 0.5;
+							trumpWeight.Diamonds += 0.5;
 						}
 						break;
 
 					case "Joker":
 						//obviously this will be a trump for any suit
-						trumpCount.Spades += 1.0;
-						trumpCount.Clubs += 1.0;
-						trumpCount.Diamonds += 1.0;						
-						trumpCount.Hearts += 1.0;							
+						trumpWeight.Spades += 1.0;
+						trumpWeight.Clubs += 1.0;
+						trumpWeight.Diamonds += 1.0;						
+						trumpWeight.Hearts += 1.0;							
 						break;						
 				}
 			
@@ -1267,16 +1372,16 @@ function App_FiveHundred(params) {
 			
 			while(maxSuit == ""){
 				
-				if(trumpCount.Hearts >= bidCount){
+				if(trumpWeight.Hearts >= bidCount){
 					maxSuit = "Hearts";
 				}
-				else if(trumpCount.Diamonds >= bidCount){
+				else if(trumpWeight.Diamonds >= bidCount){
 					maxSuit = "Diamonds";
 				}
-				else if(trumpCount.Clubs >= bidCount){
+				else if(trumpWeight.Clubs >= bidCount){
 					maxSuit = "Clubs";
 				}
-				else if(trumpCount.Spades >= bidCount){
+				else if(trumpWeight.Spades >= bidCount){
 					maxSuit = "Spades";
 				}
 				else{
@@ -1290,7 +1395,7 @@ function App_FiveHundred(params) {
 			//-1 indicates a pass.
 			//6 is the minimum allowable bid.
 			//10 is technically the maximum allowable bid, but is capped here at 8 to help the AI avoid getting set too often.
-			//any bid higher than 8 will allow the chief to select 2 partners for the team.
+			//any bid higher than 7 will allow the chief to select 2 partners for the team.
 			//this will determine how aggresively the AI will bid.
 			//if it is altered so that higher bids are made at lower counts, the AI is more likely to win the bid, but is less likely to meet the contract.
 			//this could be set up to support multiple variants which could be selectable by AI mode to give a greater difference in decision making between AI players.
@@ -1356,7 +1461,699 @@ function App_FiveHundred(params) {
 
 		this.playCard = function(g, thisRound, thisTrick){
 			
-			// !!! stub !!!
+			app.log("\r\nPlayer " + thisPlayer.id + " is thinking...");
+			
+			var playThis = "";
+			var playStatus = "";
+			var checkVal = 0;
+			var checkSuit = "";
+			
+			var t = "";
+			for(var p in thisTrick.playedThisTrick){
+				t += thisTrick.playedThisTrick[p] + ",";
+			}
+			app.log("Cards now in play: " + t);			
+			
+			app.log("Top remaining in suits: " + thisRound.topInSuit["Spades"] + " " + thisRound.topInSuit["Clubs"] + " " + thisRound.topInSuit["Diamonds"] + " " + thisRound.topInSuit["Hearts"]);
+			
+			var t = "";
+			for(var c = 0; c < thisPlayer.hand.length; c++){
+				t += thisPlayer.hand[c].toString() + ",";
+			}
+			app.log("My hand: " + t);
+			
+			//do I have partners?
+			var myTeam1 = -1;
+			var myTeam2 = -1;
+			
+			if(thisPlayer.id == thisRound.chief){
+				myTeam1 = thisRound.vice1;
+				if(thisRound.vice2 > -1){ myTeam2 = thisRound.vice2; }
+			}
+			else if(thisPlayer.id == thisRound.vice1){
+				myTeam1 = thisRound.chief;
+				if(thisRound.vice2 > -1){ myTeam2 = thisRound.vice2; }				
+			}
+			else if(thisPlayer.id == thisRound.vice2){
+				myTeam1 = thisRound.chief;
+				myTeam2 = thisRound.vice2;
+			}
+			
+			//choose a card to play
+			
+			//do I start the trick?
+			
+			if(thisTrick.leadSuit == ""){
+				
+				//yes, I start. Do I have the top card in a nontrump suit?
+				app.log("I start the trick");
+				
+				for(var s in thisRound.topInSuit){
+					if(s != thisRound.trumpSuit && playThis == ""){
+						if(thisPlayer.cardInHand(thisRound.topInSuit[s])){
+							
+							//I have the highest in a nontrump suit. Is anyone known to be out of this suit?
+							app.log("I have the highest " + s);
+							
+							//If no opponents are out, play the top card in this suit
+							if(thisRound.foeCanTrump(s, thisPlayer.id, myTeam1, myTeam2) == false){
+								app.log("No opponents are known to be out of " + s);
+								
+								playThis = thisRound.topInSuit[s];
+							}
+							else{
+								//An opponent is out of this suit. The other non trump suits will be checked, just pass through.
+								app.log("An opponent is known to be out of " + s);
+							}
+						}
+					}
+				}
+				
+				//All nontrump suits have been checked. If I haven't picked a card, continue thinking.
+				if(playThis == ""){
+					app.log("I don't have the highest in any nontrump suit.");
+					
+					//Do I have the highest in trump?
+					if(thisPlayer.cardInHand(thisRound.topInSuit[thisRound.trumpSuit])){
+						
+						//I have the highest trump, play it
+						app.log("I have highest trump");
+						
+						playThis = thisRound.topInSuit[thisRound.trumpSuit];
+					}
+					else{
+					
+						//I don't have the highest trump, do I have any trumps?
+						app.log("I don't have the highest trump");
+						
+						if(thisPlayer.suitInHand(thisRound.trumpSuit)){
+							
+							//I have a trump. Play the lowest value card of the nontrump suit with least count. (we want to open up trump usage.)
+							app.log("I have a trump, play lowest in least");
+							
+							playThis = thisPlayer.getCard("lowest", "least", thisRound.trumpSuit);
+						}
+						else{
+						
+							//I don't have any trumps. Play the lowest value card of suit with most count. (if we run out of a suit, we cant take tricks in that suit. keep as many suits viable with high value cards as possible.)
+							app.log("I don't have a trump, play lowest in most");
+							
+							playThis = thisPlayer.getCard("lowest", "most", thisRound.trumpSuit);							
+						}
+						
+					}
+					
+				}
+				
+			}
+			else{
+				
+				//Someone else lead. Do I have any of the leading suit?
+				app.log("Trick is in progress");
+				
+				if(thisPlayer.suitInHand(thisTrick.leadSuit)){
+					
+					//I have the lead suit, do I have partners?
+					if(myTeam1 > -1){
+						
+						//I have at least 1 partner, do I play last in the trick?
+						if(thisPlayer.id == app.wrapValue(0, 4, thisTrick.leadPlayer - 1)){
+							
+							//I play last, is a partner currently winning the trick?
+							if(thisTrick.topPlayer == myTeam1 || thisTrick.topPlayer == myTeam2){
+								
+								//A partner currently holds the trick, play lowest of lead suit. (throw under to let partner take the trick and I save high value cards for later. I am last so there is no risk)
+								app.log("Partner has the trick, throw under");
+								playThis = thisPlayer.getCard("lowest", thisTrick.leadSuit, thisRound.trumpSuit);
+								
+							}
+							else{
+							
+								//an opponent currently holds the trick. has a trump been thrown?
+								app.log("Opponent has the trick");
+								if(thisTrick.trumpInPlay(thisRound.trumpSuit)){
+									
+									//trump was thrown, play lowest of leading suit (we can't take this one, throw out some trash)
+									app.log("Trump was thrown, I have to throw under");
+									playThis = thisPlayer.getCard("lowest", thisTrick.leadSuit, thisRound.trumpSuit);
+								
+								}
+								else{
+									
+									//no trumps have thrown, do I have a value in the lead suit higher than the current top value?
+									var canTakeIt = false;
+									for(var c in thisPlayer.hand){
+										if(playThis == ""){
+											var thisCard = thisPlayer.hand[c];
+											if(thisCard.suit == thisTrick.leadSuit && thisCard.value > thisTrick.topValue){
+												//I can take the trick, play this card.
+												app.log("I can take the trick");
+												canTakeIt = true;
+												playThis = thisCard.toString();
+											}
+										}
+									}
+									
+									if(!canTakeIt){
+										//I can't take the trick. play lowest value card of lead suit.
+										app.log("I can't take the trick, throw under");
+										playThis = thisPlayer.getCard("lowest", thisTrick.leadSuit, thisRound.trumpSuit);
+									}
+									
+								}
+								
+							}
+							
+						}
+						else{
+						
+							//I'm not last. Have any of my partners played yet?
+							app.log("Others will play after me");
+							
+							var teamPlayed = 0;
+							
+							if(thisTrick.playedThisTrick[myTeam1] != ""){
+								app.log("Teammate 1 has played");
+								teamPlayed++;
+							}
+							
+							if(myTeam2 > -1){
+								if(thisTrick.playedThisTrick[myTeam2] != ""){
+									app.log("Teammate 2 has played");
+									teamPlayed++;
+								}
+							}
+							
+							if(teamPlayed > 0){
+							
+								//At least one partner has played. Do they currently hold the trick?
+								if(thisTrick.topPlayer == myTeam1 || thisTrick.topPlayer == myTeam2){
+									
+									//A partner holds the trick
+									app.log("A partner holds the trick");
+									
+									if(thisPlayer.ai == "Easy"){
+										//Simple logic: play lowest of lead suit (let partner hold the trick and save higher cards for later)
+										app.log("throw under partner");
+										playThis = thisPlayer.getCard("lowest", thisTrick.leadSuit, thisRound.trumpSuit);
+									}
+									else if(thisPlayer.ai == "Hard"){
+										//Complex logic: is anyone after me known to be out of the lead suit?
+										if(thisRound.foeCanTrump(thisTrick.leadSuit, thisPlayer.id, myTeam1, myTeam2)){
+											//An opponent is out of lead suit, may be able to throw trump. play lowest of lead suit
+											app.log("Opponent might throw a trump, throw under");
+											playThis = thisPlayer.getCard("lowest", thisTrick.leadSuit, thisRound.trumpSuit);
+										}
+										else{
+											
+											//no opponents are out of lead suit. has anyone played the top remaining card in the lead suit?
+											// *** note: topInSuit must be updated at the end of the trick to account for ie player 1 played AS then player 2 plays KS, AS must remain as topInSuit until the trick is finished.
+											// *** so, if someone has played topInSuit it will match their playedToTrick
+											var topInPlay = false;
+											for(var p = 0; p < 5; p++){
+												if(thisTrick.playedThisTrick[p] == thisRound.topInSuit[thisTrick.leadSuit]){
+													topInPlay = true;
+												}
+											}
+											
+											if(topInPlay){
+												//Someone played the top card in lead suit. I have to throw under.
+												app.log("Someone played top in lead suit, throw under");
+												playThis = thisPlayer.getCard("lowest", thisTrick.leadSuit, thisRound.trumpSuit);											
+											}
+											else{
+												
+												//Top in lead suit has not been played, do I have it?
+												app.log("Top card in lead suit has not yet been played");
+												var haveTop = false;
+												for(var c in thisPlayer.hand){
+													var thisCard = thisPlayer.hand[c];
+													if(thisCard.toString() == thisRound.topInSuit[thisTrick.leadSuit]){
+														haveTop = true;
+													}			
+												}
+													
+												if(haveTop){
+												
+													//I have the top card in the lead suit. Has a partner played the next highest down?
+													app.log("I have the top card in the lead suit");
+													// !!! ???
+													var i = thisTrick.playedThisTrick.indexOf(thisCard.getNextCard(-1));
+													if(i > -1 && i == myTeam1 || i > -1 && i == myTeam2 ){
+														//A partner played next card down, they have the trick, throw under and save top card for later.
+														app.log("Partner has the next highest down, throw under");
+														playThis = thisPlayer.getCard("lowest", thisTrick.leadSuit, thisRound.trumpSuit);
+													}
+													else{
+														//partner could be beat, throw top card in suit
+														app.log("Partner could be beat, play top in lead suit");
+														playThis = thisPlayer.getCard("highest", thisTrick.leadSuit, thisRound.trumpSuit);
+													}
+													
+												}
+												else{
+													
+													//I don't have the top card in lead suit, and highest has not yet been played. play lowest card of lead suit.
+													//top card will probably come out later in the trick and beat anything we throw, save higher cards for later.
+													app.log("I don't have top in lead suit, throw under");
+													playThis = thisPlayer.getCard("lowest", thisTrick.leadSuit, thisRound.trumpSuit);
+												}
+												
+											}
+											
+										}
+										
+									}
+									
+								}
+								else{
+								
+									//An opponent holds the trick
+									app.log("An opponent holds the trick");
+									
+									if(thisPlayer.ai == "Easy"){
+									
+										//simple logic: Do I have a card higher than the current top card?
+										var canTake = false;
+										
+										for(var c in thisPlayer.hand){
+											if(playThis == ""){
+												var thisCard = thisPlayer.hand[c];
+												if(thisCard.suit == thisTrick.leadSuit && thisCard.value > thisTrick.topValue){
+													//I can hold the trick, may take it. play highest card of lead suit
+													app.log("I may be able to take the trick, pick highest of lead suit");
+													canTake = true;
+													playThis = thisPlayer.getCard("highest", thisTrick.leadSuit, thisRound.trumpSuit);
+												}
+											}
+										}
+										
+										if(!canTake){
+											//can't take the trick, throw under
+											app.log("I can't take the trick, must throw under: pick lowest of lead suit");
+											playThis = thisPlayer.getCard("lowest", thisTrick.leadSuit, thisRound.trumpSuit);
+										}
+									
+									}
+									else{
+									
+										//complex logic: Do I have the top card in the lead suit?
+										
+										if(thisPlayer.cardInHand(thisRound.topInSuit[thisTrick.leadSuit])){
+										
+											//I have the highest. Is anyone after me known to be out of this suit?
+											app.log("I have top card in lead suit");
+											
+											if(thisRound.foeCanTrump(thisTrick.leadSuit, g.players, thisPlayer.id, myTeam1, myteam2)){
+											
+												//An opponent is out of lead suit, may be able to throw trump. play a card high enough to hold the trick, but save top in suit if possible.
+												app.log("Opponent may throw trump. hold the trick but save top in suit if possible");
+												
+												for(var c in thisPlayer.hand){
+													if(playThis == ""){
+														var thisCard = thisPlayer.hand[c];
+														if(thisCard.suit == thisTrick.leadSuit && thisCard.value > thisTrick.topValue){
+															playThis = thisCard.toString();
+														}	
+													}
+												}
+												
+											}
+											else{
+												//No one is known to be out, throw highest of lead suit.
+												app.log("No opponents are known to be out of lead suit. Throw top in suit");
+												playThis = thisPlayer.getCard("highest", thisTrick.leadSuit, thisRound.trumpSuit);
+											}
+										
+										}
+										else{
+											//I don't have the highest and may be beat. throw under.
+											app.log("I don't have the highest of this suit. throw lowest of lead suit");
+											playThis = thisPlayer.getCard("lowest", thisTrick.leadSuit, thisRound.trumpSuit);
+										}
+										
+									}
+									
+								}
+								
+							}
+							else{
+							
+								//No one on my team has played yet.
+								app.log("No one on my team has played yet");
+								
+								if(thisPlayer.ai == "Easy"){
+									
+									//simple logic: Do I have a card higher than the current top card?
+									var canTake = false;
+									
+									for(var c in thisPlayer.hand){
+										if(playThis == ""){
+											var thisCard = thisPlayer.hand[c];
+											if(thisCard.suit == thisTrick.leadSuit && thisCard.value > thisTrick.topValue){
+												//I can hold the trick, may take it. play highest card of lead suit
+												app.log("I may be able to take the trick, pick highest of lead suit");
+												canTake = true;
+												playThis = thisPlayer.getCard("highest", thisTrick.leadSuit, thisRound.trumpSuit);
+											}
+										}
+									}
+									
+									if(!canTake){
+										//can't take the trick, throw under
+										app.log("I can't take the trick, must throw under, pick lowest of lead suit");
+										playThis = thisPlayer.getCard("lowest", thisTrick.leadSuit, thisRound.trumpSuit);
+									}
+									
+								}
+								else{
+								
+									//Complex logic: Has top in lead suit been played?
+									if(thisTrick.topInPlay(thisRound.topInSuit[thisTrick.leadSuit])){
+										//An opponent has played the top card in the lead suit. must throw under.
+										app.log("An opponent has played the top card in the lead suit. must throw under, pick lowest in lead suit");
+										playThis = thisPlayer.getCard("lowest", thisTrick.leadSuit, thisRound.trumpSuit);
+									}
+									else{
+									
+										//No one has played top in suit yet, do I have it?
+										if(thisPlayer.cardInHand(thisRound.topInSuit[thisTrick.leadSuit])){
+										
+											//I have the highest. Is anyone after me known to be out of this suit?
+											app.log("I have top card in lead suit");
+											
+											if(thisRound.foeCanTrump(thisTrick.leadSuit, g.players, thisPlayer.id, myTeam1, myteam2)){
+											
+												//An opponent is out of lead suit, may be able to throw trump. play a card high enough to hold the trick, but save top in suit if possible.
+												app.log("Opponent may throw trump. hold the trick but save top in suit if possible");
+												
+												for(var c in thisPlayer.hand){
+													if(playThis == ""){
+														var thisCard = thisPlayer.hand[c];
+														if(thisCard.suit == thisTrick.leadSuit && thisCard.value > thisTrick.topValue){
+															playThis = thisCard.toString();
+														}	
+													}
+												}
+												
+											}
+											else{
+												//No one is known to be out, throw highest of lead suit.
+												app.log("No opponents are known to be out of lead suit. Throw top in suit");
+												playThis = thisPlayer.getCard("highest", thisTrick.leadSuit, thisRound.trumpSuit);
+											}
+										
+										}
+										else{
+											//I don't have the highest and may be beat. throw under.
+											app.log("I don't have the highest of this suit. throw lowest of lead suit");
+											playThis = thisPlayer.getCard("lowest", thisTrick.leadSuit, thisRound.trumpSuit);
+										}	
+										
+									}
+									
+								}
+								
+							}
+							
+						}
+						
+					}
+					else{
+					
+						//I have no partners
+						app.log("I don't have partners");
+						
+						if(thisPlayer.ai == "Easy"){
+						
+							//simple logic: Do I have a card higher than the current top card?
+							var canTake = false;
+							
+							for(var c in thisPlayer.hand){
+								if(playThis == ""){
+									var thisCard = thisPlayer.hand[c];
+									if(thisCard.suit == thisTrick.leadSuit && thisCard.value > thisTrick.topValue){
+										//I can hold the trick, may take it. play highest card of lead suit
+										app.log("I may be able to take the trick, pick highest of lead suit.");
+										canTake = true;
+										playThis = thisPlayer.getCard("highest", thisTrick.leadSuit, thisRound.trumpSuit);
+									}
+								}
+							}
+							
+							if(!canTake){
+								//can't take the trick, throw under
+								app.log("I can't take the trick, must throw under, pick lowest in lead suit");
+								playThis = thisPlayer.getCard("lowest", thisTrick.leadSuit, thisRound.trumpSuit);
+							}
+							
+							
+						}
+						else{
+						
+							//Complex logic: Has top in lead suit been played?
+							if(thisTrick.topInPlay(thisRound.topInSuit[thisTrick.leadSuit])){
+								//An opponent has played the top card in the lead suit. must throw under.
+								app.log("An opponent has played the top card in the lead suit. must throw under, pick lowest in lead suit");
+								playThis = thisPlayer.getCard("lowest", thisTrick.leadSuit, thisRound.trumpSuit);
+							}
+							else{
+							
+								//No one has played top in suit yet, do I have it?
+								if(thisPlayer.cardInHand(thisRound.topInSuit[thisTrick.leadSuit])){
+								
+									//I have the highest. Is anyone after me known to be out of this suit?
+									app.log("I have top card in lead suit");
+									
+									if(thisRound.foeCanTrump(thisTrick.leadSuit, g.players, thisPlayer.id, myTeam1, myteam2)){
+									
+										//An opponent is out of lead suit, may be able to throw trump. play a card high enough to hold the trick, but save top in suit if possible.
+										app.log("Opponent may throw trump. hold the trick but save top in suit if possible");
+										
+										for(var c in thisPlayer.hand){
+											if(playThis == ""){
+												var thisCard = thisPlayer.hand[c];
+												if(thisCard.suit == thisTrick.leadSuit && thisCard.value > thisTrick.topValue){
+													playThis = thisCard.toString();
+												}	
+											}
+										}
+										
+									}
+									else{
+										//No one is known to be out, throw highest of lead suit.
+										app.log("No opponents are known to be out of lead suit. Throw top in suit");
+										playThis = thisPlayer.getCard("highest", thisTrick.leadSuit, thisRound.trumpSuit);
+									}
+								
+								}
+								else{
+									//I don't have the highest and may be beat. throw under.
+									app.log("I don't have the highest of this suit. throw lowest of lead suit");
+									playThis = thisPlayer.getCard("lowest", thisTrick.leadSuit, thisRound.trumpSuit);
+								}	
+								
+							}
+									
+						}
+						
+					}
+					
+				}
+				else{
+					
+					//I am out of the lead suit, I can use trumps and offsuits. Do I have any trumps?
+					app.log("I am out of the leading suit");
+					
+					if(thisPlayer.suitInHand(thisRound.trumpSuit)){
+					
+						//I have a trump, Do I have partners?
+						app.log("I have trumps");
+						
+						// !!! stub !!!
+						
+						// !!! Temp: use simpler logic for now: is there a trump in play?
+						if(thisTrick.trumpInPlay(thisRound.trumpSuit)){
+						
+							//yes there is a trump. Do I have a higher trump?
+							var canTake = false;
+							
+							for(var c in thisPlayer.hand){
+								if(playThis == ""){
+									var thisCard = thisPlayer.hand[c];
+									if(thisCard.suit == thisRound.trumpSuit && thisCard.value > thisTrick.topValue){
+										//I can hold the trick, may take it. play highest card of trump suit
+										app.log("I may be able to take the trick, pick highest trump");
+										canTake = true;
+										playThis = thisPlayer.getCard("highest", thisRound.trumpSuit, thisRound.trumpSuit);
+									}
+								}
+							}
+							
+							if(!canTake){
+								//can't take the trick, throw under with offsuit of least count. (work towards opening my trump usage across more suits.)
+								app.log("I can't take the trick, throw lowest offsuit");
+								playThis = thisPlayer.getCard("lowest", "least", thisRound.trumpSuit);
+							}
+							
+						}
+						else{
+							
+							//No trumps in play, I can hold the trick with any trump, throw lowest
+							app.log("No trumps in play, hold trick with my lowest trump");
+							playThis = thisPlayer.getCard("lowest", thisRound.trumpSuit, thisRound.trumpSuit);
+						}
+						
+					}
+					else{
+						
+						//I have no trumps, must throw an offsuit. pick lowest value card of suit with most count. (keep as many high cards in as many suits as possible)
+						app.log("I can't take the trick and have no more trumps. throw lowest value of most count");
+						playThis = thisPlayer.getCard("lowest", "most", thisRound.trumpSuit);
+					}
+					
+				}
+				
+			}
+			
+			if(playThis == ""){
+				app.log("\r\nerror: no card has been chosen, AI logic fault\r\n");
+			}
+			else{
+			
+				//card is chosen, handle updates
+				app.log("Player chose to play " + playThis);
+				
+				//evaluate card
+				for(var c = 0; c < thisPlayer.hand.length; c++){
+					
+					var thisCard = thisPlayer.hand[c];
+					
+					if(thisCard.toString() == playThis){
+						checkVal = thisCard.value;
+						checkSuit = thisCard.suit;
+					}
+					
+				}
+				app.log("Played value " + checkVal + " of suit " + checkSuit);
+				
+				playStatus = "throw under";
+				
+				//Did anyone throw a trump?
+				if(thisTrick.trumpInPlay(thisRound.trumpSuit) == true){
+				
+					app.log("Trump is in play");
+					
+					//Did I throw a trump?
+					if(checkSuit == thisRound.trumpSuit){
+						
+						app.log("I threw trump");
+						
+						//Do I have top in trump?
+						if(checkVal >= thisTrick.topValue){
+							app.log("My trump wins, I am new on top");
+							playStatus = "new on top";
+						}
+						else{
+							app.log("My trump was beaten");
+							playStatus = "throw under";
+						}
+						
+					}
+					else{
+						app.log("I was trumped");
+						playStatus = "throw under";
+					}
+					
+				}
+				else{
+					
+					//no trumps thrown, did I start the trick?
+					if(thisTrick.leadSuit == ""){
+						app.log("I lead the trick, I am new on top");
+						playStatus = "new on top";
+					}
+					else{
+						
+						//did not lead, did I play in lead suit?
+						if(checkSuit == thisTrick.leadSuit){
+							app.log("I played in the lead suit, no trumps in play");
+							
+							//Do I have top in lead suit?
+							if(checkVal >= thisTrick.topValue){
+								app.log("I have the highest in trick, I am new on top");
+								playStatus = "new on top";
+							}
+							else{
+								app.log("I was beaten");
+								playStatus = "throw under";
+							}
+							
+						}
+						else if(checkSuit == thisRound.trumpSuit){
+							app.log("I threw a trump, no other trumps in play, I am new on top");
+							playStatus = "new on top";
+						}
+						else{
+							app.log("I played a non-trump off-suit");
+							playStatus = "throw under";
+						}
+						
+					}
+					
+				}
+				
+				//Locate card in hand
+				for(var c = 0; c < thisPlayer.hand.length; c++){
+					var thisCard = thisPlayer.hand[c];
+					if(thisCard == playThis){
+						var playCard = thisCard;
+						var cardIndex = c;
+						app.log("Card located in hand at " + cardIndex);
+					}
+				}
+				
+				//play card to trick
+				thisTrick.playedThisTrick[thisPlayer.id] = playThis;
+				
+				var t = "";
+				for(var p in thisTrick.playedThisTrick){
+					t += thisTrick.playedThisTrick[p] + ",";
+				}
+				app.log("Cards now in play: " + t);
+				
+				//update top status
+				if(playStatus == "new on top"){
+					thisTrick.topPlayer = thisPlayer.id;
+					thisTrick.topSuit = playCard.suit;
+					thisTrick.topValue = playCard.value;
+					app.log("Player " + thisPlayer.id + " now holds the trick");
+				}
+				
+				//update lead suit
+				if(thisTrick.leadSuit == ""){
+					thisTrick.leadSuit = playCard.suit;
+					app.log("Lead suit is now " + thisTrick.leadSuit);
+				}
+				
+				//update top in suit
+				// !!! This needs to recursively check that the next card down has not previously been played.
+				// !!! Top in Suit needs to be updated only after trick is complete !!! move this to updatePlayPhase and iterate through all playedToTrick cards
+				if(playCard.toString() == thisRound.topInSuit[playCard.suit]){
+					thisRound.topInSuit[playCard.suit] = playCard.getNextCard(-1);
+					app.log("New top " + playCard.suit + " is " + thisRound.topInSuit[playCard.suit]);
+				}
+				
+				//update out of suit
+				if(playCard.suit != thisTrick.leadSuit){
+					thisRound.outOfSuit[thisTrick.leadSuit][thisPlayer.id] = true;
+					app.log("Player " + thisPlayer.id + " is out of " + thisTrick.leadSuit);
+				}
+				
+				//remove card from hand
+				thisPlayer.hand.splice(cardIndex, 1);
+				
+			}
 			
 		}
 
@@ -1383,11 +2180,9 @@ function App_FiveHundred(params) {
 		this.getCard = function(direction, suit, trump){
 		
 			//This will select a card from the players hand to be played based on min/max parameters
-
-			var pickCard;
 			
 			//ensure that our count and sort is current
-			thisPlayer.sortHand();
+			thisPlayer.sortHand("count");
 			
 			//evaluate the hand and select a card
 			
@@ -1396,50 +2191,59 @@ function App_FiveHundred(params) {
 				if(suit == "least"){
 				
 					//find the lowest value card in nontrump suit of least count.
-					var suits = Object.keys(thisPlayer.suitCount);
+					app.log("looking for lowest value in least");
+					var suits = Object.keys(thisPlayer.suitWeight);
 					for(var s = 0; s < suits.length; s++){
+						app.log("checking suit " + suits[s] + " per count");
 						for(var c in thisPlayer.hand){
 							var thisCard = thisPlayer.hand[c];
+							app.log("check card " + c + " " + thisCard.value + thisCard.suit);
 							if(thisCard.suit == suits[s] && thisCard.suit != trump){
-								pickCard = thisCard.toString();
+								return thisCard.toString();
 							}
 						}						
 					}
 					
 					//if nothing picked, player has only trumps. get lowest value card left. (having been sorted, this will always be hand[0])
-					pickCard = thisPlayer.hand[0].toString();
+					return thisPlayer.hand[0].toString();
 					
 				}
 				else if(suit == "most"){
 				
 					//find the lowest value card in nontrump suit of most count.
-					var suits = Object.keys(thisPlayer.suitCount);
+					app.log("looking for lowest value in most");
+					var suits = Object.keys(thisPlayer.suitWeight);
 					for(var s = suits.length - 1; s >= 0; s--){
+						app.log("checking suit " + suits[s] + " per count");
 						for(var c in thisPlayer.hand){
 							var thisCard = thisPlayer.hand[c];
+							app.log("check card " + c + " " + thisCard.value + thisCard.suit);
 							if(thisCard.suit == suits[s] && thisCard.suit != trump){
-								pickCard = thisCard.toString();
+								return thisCard.toString();
 							}
 						}						
 					}
 					
 					//if nothing picked, player has only trumps. get lowest value card left.
-					pickCard = thisPlayer.hand[0].toString();
+					return thisPlayer.hand[0].toString();
 					
 				}
 				else{
 				
 					//find the lowest value card in specified suit
-					for(var c in thisPlayer.hand){
+					app.log("looking for lowest in " + suit);
+					//for(var c in thisPlayer.hand){
+					for(var c = 0; c < thisPlayer.hand.length; c++){
 						var thisCard = thisPlayer.hand[c];
-						if(thisCard.suit == suits[s]){
-							pickCard = thisCard.toString();
+						app.log("check card " + c + " " + thisCard.value + thisCard.suit);
+						if(thisCard.suit == suit){
+							return thisCard.toString();
 						}
 					}					
 					
 					//if nothing picked, player has no cards of specified suit.
 					
-					// !!! stub !!! apply error handling: this should not be reached. if it is, there is a flaw in AI logic
+					// TODO: apply error handling: this should not be reached. if it is, there is a flaw in AI logic
 				
 				}
 				
@@ -1449,56 +2253,61 @@ function App_FiveHundred(params) {
 				if(suit == "least"){
 				
 					//find the highest value card in nontrump suit of least count.
-					var suits = Object.keys(thisPlayer.suitCount);
+					app.log("looking for highest value in least");
+					var suits = Object.keys(thisPlayer.suitWeight);
 					for(var s = 0; s < suits.length; s++){
 						for(var c = thisPlayer.hand.length - 1; c >= 0; c--){
 							var thisCard = thisPlayer.hand[c];
+							app.log("check card " + c + " " + thisCard.value + thisCard.suit);
 							if(thisCard.suit == suits[s] && thisCard.suit != trump){
-								pickCard = thisCard.toString();
+								return thisCard.toString();
 							}
 						}						
 					}
 					
 					//if nothing picked, player has only trumps. get highest value card left. (having been sorted, this will always be hand[0])
-					pickCard = thisPlayer.hand[thisPlayer.hand.length].toString();
+					return thisPlayer.hand[thisPlayer.hand.length].toString();
 					
 				}
 				else if(suit == "most"){
 				
 					//find the highest value card in nontrump suit of most count.
-					var suits = Object.keys(thisPlayer.suitCount);
+					app.log("looking for highest value in most");
+					var suits = Object.keys(thisPlayer.suitWeight);
 					for(var s = suits.length - 1; s >= 0; s--){
 						for(var c = thisPlayer.hand.length - 1; c >= 0; c--){
 							var thisCard = thisPlayer.hand[c];
+							app.log("check card " + c + " " + thisCard.value + thisCard.suit);
 							if(thisCard.suit == suits[s] && thisCard.suit != trump){
-								pickCard = thisCard.toString();
+								return thisCard.toString();
 							}
 						}						
 					}
 					
 					//if nothing picked, player has only trumps. get lowest value card left.
-					pickCard = thisPlayer.hand[thisPlayer.hand.length].toString();
+					return thisPlayer.hand[thisPlayer.hand.length].toString();
 					
 				}
 				else{
 				
 					//find the highest value card in specified suit
+					app.log("looking for highest value " + suit);
 					for(var c = thisPlayer.hand.length - 1; c >= 0; c--){
 						var thisCard = thisPlayer.hand[c];
-						if(thisCard.suit == suits[s]){
-							pickCard = thisCard.toString();
+						app.log("check card " + c + " " + thisCard.value + thisCard.suit);
+						if(thisCard.suit == suit){
+							app.log("picked card " + c);
+							return thisCard.toString();
 						}
 					}					
 					
 					//if nothing picked, player has no cards of specified suit.
 					
-					// !!! stub !!! apply error handling: this should not be reached. if it is, there is a flaw in AI logic
+					// TODO: apply error handling: this should not be reached. if it is, there is a flaw in AI logic
 				
 				}				
 			
 			}
-			
-			return pickCard;
 		
 		}
 
@@ -1560,9 +2369,38 @@ function App_FiveHundred(params) {
 
 	
 	
-	this.pasteCard = function(c, x, y){
+	this.pasteCard = function(c, e, x, y){
 		
-		// !!! stub !!!
+		var ce = $(c);
+		
+		//fade out
+		ce.fadeOut('fast', function(){
+		
+			//reposition to paste location
+			ce.detach().appendTo($(e));
+			ce.css('left', x + "px");
+			ce.css('top', y + "px");
+			
+			//fade in
+			ce.fadeIn('fast');
+			
+		});
+		
+	}
+	
+	
+	
+	this.flipCard = function(c, d){
+		
+		var ce = $(c);
+		var ci = c.substr(6);
+		
+		if(d == "up"){
+			ce.html('<img src="img/cards/'+app.skin+'/'+ci+'.jpg" />');
+		}
+		else{
+			ce.html('<img src="img/cards/'+app.skin+'/backface.jpg" />');
+		}
 		
 	}
 
@@ -1577,6 +2415,8 @@ function App_FiveHundred(params) {
 	
 	
 	//Execute on Construct - - - - - - - - - - - - -
+	
+	app.buildElements();
 	
 	app.bindHandlers();	
 	
