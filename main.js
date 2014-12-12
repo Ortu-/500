@@ -292,6 +292,8 @@ function App_FiveHundred(params) {
 					//let the player make a bid
 					
 					//update available bid options: player can only make a bid higher than current top bid, or must pass.
+					//TODO: don't use a select box. it's too form-ish. just alter styling and responsiveness of invalid options.
+					
 					$('#select-playerBid').html('');
 					
 					var opts = [];
@@ -312,12 +314,14 @@ function App_FiveHundred(params) {
 					
 					//reveal bid schedule
 					var bs = $('#panel-bidSchedule');
-					bs.animate({
-						'margin-left':'0px'
+					bs.fadeIn("slow");
+					
+					/*bs.animate({
+						'left':'0px'
 					}, 800, function(){
-						//on reveal callback
+						//on revealed callback
 						//nothing to see here
-					});
+					});*/
 					
 					//bind player bid select callback handler
 					$('#submit-playerBid').on('click', function(){ 
@@ -333,12 +337,16 @@ function App_FiveHundred(params) {
 						
 						//hide bid schedule
 						var bs = $('#panel-bidSchedule');
-						bs.animate({
-							'margin-left':'1000px'
+						bs.fadeOut("slow", function(){
+							thisRound.updateBiddingResults(g, p);
+						});
+						
+						/*bs.animate({
+							'left':'205px'
 						}, 800, function(){
 							//wait until panel is fully hidden to continue
 							thisRound.updateBiddingResults(g, p);						
-						});	
+						});	*/
 
 					});
 					
@@ -437,7 +445,7 @@ function App_FiveHundred(params) {
 					thisRound.seatCount = 0;
 					
 					//advance to team selection
-					thisRound.runKittyPhase(g);
+					//thisRound.runKittyPhase(g);
 					
 				}
 				else{
@@ -1002,7 +1010,7 @@ function App_FiveHundred(params) {
 		//get the bids
 		app.log("\r\nStarting the Bid...");
 		
-		//thisRound.runBidPhase(g);
+		thisRound.runBidPhase(g);
 		
 	}
 		

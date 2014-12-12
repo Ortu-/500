@@ -38,7 +38,42 @@
 				width:940px;
 				margin:0 auto;
 				position:relative;
-			}	
+			}
+			
+			#panel-bidSchedule{
+				width:650px;
+				height:600px;
+				position:absolute;
+				margin:auto;
+				top:0px;
+				left:0px;
+				bottom:0px;
+				right:0px;
+				z-index:150;
+				border:#777;
+				background-color:#333;
+				border:1px solid #777;
+				display:none;
+			}
+				.bid-row{
+					text-align:center;
+					margin:0 auto;
+					width:550px;
+				}
+				.bid-cell{
+					width:100px;
+					height:95px;
+					border:1px solid #555;
+					text-align:center;
+					display:inline-block;
+					background-color:#444;
+					padding-top:5px;
+				}
+				.bid-invalid{
+					color:#777;
+					background-color:#333;
+					border:1px solid #444;
+				}
 			
 			.card{
 				width:80px;
@@ -83,8 +118,42 @@
 				<span id="player-4" class="my-player" >P5</span>
 			</div>
 			<div id="panel-bidSchedule">
-			
-				<select id="select-playerBid"></select>
+				<div style="text-align:center;"><h3>Bidding Schedule</h3></div>
+				<!--<div><span class="bid-label" style="margin-left:5px;"><u>Bid</u></span><span class="bid-value" style="margin-right:5px;"><u>Points</u></span></div>
+				<div id="bid20" class="bid-row row-odd bid-invalid"><span class="bid-label">6 Spades: </span><span class="bid-value">20</span></div>
+				<div id="bid40" class="bid-row row-even bid-invalid"><span class="bid-label">6 Clubs: </span><span class="bid-value">40</span></div>
+				<div id="bid60" class="bid-row row-odd bid-invalid"><span class="bid-label">6 Diamonds: </span><span class="bid-value">60</span></div>
+				<div id="bid80" class="bid-row row-even"><span class="bid-label">6 Hearts: </span><span class="bid-value">80</span></div>
+				<div id="bid100" class="bid-row row-odd"><span class="bid-label">6 No Trump: </span><span class="bid-value">100</span></div>
+				<div id="bid120" class="bid-row row-even"><span class="bid-label">7 Spades: </span><span class="bid-value">120</span></div>
+				<div id="bid140" class="bid-row row-odd"><span class="bid-label">7 Clubs: </span><span class="bid-value">140</span></div>
+				<div id="bid160" class="bid-row row-even"><span class="bid-label">7 Diamonds: </span><span class="bid-value">160</span></div>
+				<div id="bid180" class="bid-row row-odd"><span class="bid-label">7 Hearts: </span><span class="bid-value">180</span></div>
+				<div id="bid200" class="bid-row row-even"><span class="bid-label">7 No Trump: </span><span class="bid-value">200</span></div>
+				<div id="bid220" class="bid-row row-odd"><span class="bid-label">8 Spades: </span><span class="bid-value">220</span></div>
+				<div id="bid240" class="bid-row row-even"><span class="bid-label">8 Clubs: </span><span class="bid-value">240</span></div>
+				<div id="bid260" class="bid-row row-odd"><span class="bid-label">8 Diamonds: </span><span class="bid-value">260</span></div>
+				<div id="bid280" class="bid-row row-even"><span class="bid-label">8 Hearts: </span><span class="bid-value">280</span></div>
+				<div id="bid300" class="bid-row row-odd"><span class="bid-label">8 No Trump: </span><span class="bid-value">300</span></div>
+				<div id="bid320" class="bid-row row-even"><span class="bid-label">9 Spades: </span><span class="bid-value">320</span></div>
+				<div id="bid340" class="bid-row row-odd"><span class="bid-label">9 Clubs: </span><span class="bid-value">340</span></div>
+				<div id="bid360" class="bid-row row-even"><span class="bid-label">9 Diamonds: </span><span class="bid-value">360</span></div>
+				<div id="bid380" class="bid-row row-odd"><span class="bid-label">9 Hearts: </span><span class="bid-value">380</span></div>
+				<div id="bid400" class="bid-row row-even"><span class="bid-label">9 No Trump: </span><span class="bid-value">400</span></div>
+				<div id="bid420" class="bid-row row-odd"><span class="bid-label">10 Spades: </span><span class="bid-value">420</span></div>
+				<div id="bid440" class="bid-row row-even"><span class="bid-label">10 Clubs: </span><span class="bid-value">440</span></div>
+				<div id="bid460" class="bid-row row-odd"><span class="bid-label">10 Diamonds: </span><span class="bid-value">460</span></div>
+				<div id="bid480" class="bid-row row-even"><span class="bid-label">10 Hearts: </span><span class="bid-value">480</span></div>
+				<div id="bid500" class="bid-row row-odd"><span class="bid-label">10 No Trump: </span><span class="bid-value">500</span></div>-->
+				<select id="select-playerBid" style="display:none;"></select>
+
+				<div class="bid-row">
+					<span id="bid20"  class="bid-cell bid-invalid">6 Spades<br/><br/>20 Points</span>
+					<span id="bid120" class="bid-cell">7 Spades<br/><br/>120 Points</span>
+					<span id="bid120" class="bid-cell">8 Spades<br/><br/>220 Points</span>
+					<span id="bid120" class="bid-cell">9 Spades<br/><br/>320 Points</span>
+					<span id="bid120" class="bid-cell">10 Spades<br/><br/>420 Points</span>
+				</div>
 			</div>
 		</div>
 
