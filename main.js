@@ -22,13 +22,14 @@ function App_FiveHundred(params) {
 
 	this.phase = "";
 	
+	this.submitBid = "";
 	
 	//build ui elements -------------------------------------------------------
 	
 	this.buildElements = function(){
 
 		//cards
-		for(var v = 2; v <= 16; v++){
+		for(var v = 2; v <= 17; v++){
 			var t = $('#field').html();
 			t += '<div id="card-S' + v + '" class="card" ><img src="img/cards/'+app.skin+'/s'+v+'.jpg" /></div>';
 			t += '<div id="card-C' + v + '" class="card" ><img src="img/cards/'+app.skin+'/c'+v+'.jpg" /></div>';
@@ -59,40 +60,11 @@ function App_FiveHundred(params) {
 				//$('#' + currentFocus).click();
 				
 				//start a game
+				//TODO: check for game not in progress
 				$('#main').html('starting');
 				var thisGame = new app.Game('Easy');
 			}
 		});	
-		
-		//Card Clicks
-		$(function(){
-			$(".card").click(function(e) {
-				
-				var cid = $(this).attr('id').substr(5, 2);
-				
-				switch(app.phase){
-					case "kitty":
-					
-						// !!! stub !!! execute trade between kitty and hand.
-					
-						break;
-						
-					case "play":
-						
-						// !!! stub !!! play a card from hand to current trick.
-						
-						break;
-						
-					default:
-					
-						//ignore.
-						
-						break;
-						
-				}
-				
-			});
-		});		
 		
 		app.log("Application Loaded");
 		
@@ -290,69 +262,67 @@ function App_FiveHundred(params) {
 				}
 				else{
 					//let the player make a bid
-					
-					//update available bid options: player can only make a bid higher than current top bid, or must pass.
-					//TODO: don't use a select box. it's too form-ish. just alter styling and responsiveness of invalid options.
-					
-					$('#select-playerBid').html('');
-					
-					var opts = [];
-						
-						opts.push("-Select Bid-");
-						opts.push("Pass");
-						
-						for(var o in app.baseSchedule){
-							var splitBid = app.baseSchedule[o].split(" ");
-							if(thisRound.getBidPoints(splitBid[1], splitBid[0]) > thisRound.getBidPoints(thisRound.topBidSuit, thisRound.topBidAmount)){
-								opts.push(app.baseSchedule[o]);
-							}
-						}
-					
-					for(var o in opts){
-						$('#select-playerBid').append('<option value="'+opts[o]+'">'+opts[o]+'</option>');
-					}
+					app.log("player is human, wait for click callback");
+					//TODO: update available bid options: player can only make a bid higher than current top bid, or must pass.
 					
 					//reveal bid schedule
 					var bs = $('#panel-bidSchedule');
-					bs.fadeIn("slow");
+					bs.fadeIn("slow", function(){
 					
-					/*bs.animate({
-						'left':'0px'
-					}, 800, function(){
-						//on revealed callback
-						//nothing to see here
-					});*/
-					
-					//bind player bid select callback handler
-					$('#submit-playerBid').on('click', function(){ 
+						//bind player bid select callback handler
+						$('#submit-playerBid').on('click', function(){
+							
+							app.log("clicked submit");
+							
+							//evaluate bid
+							var playerBid = app.submitBid;
+							var splitBid = playerBid.split("_");
+							
+							thisPlayer.bidAmount = splitBid[1];
+							thisPlayer.bidSuit = splitBid[0];
+							
+							//thisRound.playerBids[p] = playerBid;
+							thisRound.playerBids[p] = splitBid[1] + " " + splitBid[0];
+							
+							app.log("Player " + thisPlayer.id + ": " + thisRound.playerBids[p]);
+							
+							//hide bid schedule
+							var bs = $('#panel-bidSchedule');
+							bs.fadeOut("slow", function(){
+								thisRound.updateBiddingResults(g, p);
+							});
 
-						//evaluate bid
-						var playerBid = $(this).val();						
-						var splitBid = playerBid.split(" ");
-						
-						thisPlayer.bidAmount = splitBid[0];
-						thisPlayer.bidSuit = splitBid[1];
-						
-						thisRound.playerBids[p] = playerBid;
-						
-						//hide bid schedule
-						var bs = $('#panel-bidSchedule');
-						bs.fadeOut("slow", function(){
-							thisRound.updateBiddingResults(g, p);
 						});
 						
-						/*bs.animate({
-							'left':'205px'
-						}, 800, function(){
-							//wait until panel is fully hidden to continue
-							thisRound.updateBiddingResults(g, p);						
-						});	*/
-
+						//bind bid clicks
+						$(function(){
+							$(".bid-cell").click(function(e) {
+								if(!$(this).hasClass("bid-invalid")){
+									$(".bid-cell").each(function(){
+										$(this).removeClass("bid-selected");
+									});
+									$(this).addClass("bid-selected");
+									var tBid = $(this).attr('id');
+									app.submitBid = tBid;
+								}
+							});
+						});	
+						
+						$("#pass_0").on('click', function(e){ 
+							
+							$(".bid-cell").each(function(){
+								$(this).removeClass("bid-selected");
+							});		
+							app.submitBid = "pass_0";
+							$('#submit-playerBid').click();
+						});	
+						
 					});
 					
 				}	
 			}
 			else{
+				app.log("this player already passed or is top bidder");
 				thisRound.updateBiddingResults(g, p);
 			}
 			
@@ -361,105 +331,122 @@ function App_FiveHundred(params) {
 
 
 		this.updateBiddingResults = function(g, p){
-			
-			app.log("\r\nChecking bid results...");
-			
-			var thisPlayer = g.players[p];
-			
-			//check bid result
-			if(thisPlayer.bidSuit == "pass"){
-				app.log("Player " + p + " passed");
-			}
-			else{
-				//new high bid
-				app.log("Player "+ p + " now holds the bid");
+			if(app.phase == "bid"){
+				app.log("\r\nChecking bid results...");
 				
-				thisRound.topBidSuit = thisPlayer.bidSuit;
-				thisRound.topBidAmount = thisPlayer.bidAmount;
-				thisRound.topBidPlayer = p;
-			}
-			
-			//check for winning bid || all passed
-
-			thisRound.passCount = 0;
-			thisRound.bidCount = 0;
-			for(var t = 0; t < g.players.length; t++){
-				if(g.players[t].bidSuit == "pass"){
-					thisRound.passCount++;
-				}
-				if(g.players[t].bidSuit != ""){
-					thisRound.bidCount++;
-				}
-			}
-			app.log("Pass count = " + thisRound.passCount + ", Bid count = " + thisRound.bidCount);
-			
-			if(thisRound.passCount > 4){
-				app.log("\r\nAll players passed -> redeal");
+				var thisPlayer = g.players[p];
 				
-				thisRound.trumpSuit = "redeal";
-			}
-			else if(thisRound.passCount == 4 && thisRound.bidCount == 5){
-				//we have a winning bid
-				
-				app.log("\r\nPlayer " + thisRound.topBidPlayer + " has won the bid.\r\nContract is " + thisRound.topBidAmount + " " + thisRound.topBidSuit);
-
-				thisRound.trumpSuit = thisRound.topBidSuit;
-				thisRound.chief = thisRound.topBidPlayer;
-				
-				if(thisRound.topBidAmount < 8){
-					thisRound.viceLimit = 1;
+				//check bid result
+				if(thisPlayer.bidSuit == "pass"){
+					app.log("Player " + p + " passed");
 				}
 				else{
-					thisRound.viceLimit = 2;
+					//new high bid
+					app.log("Player "+ p + " now holds the bid");
+					
+					thisRound.topBidSuit = thisPlayer.bidSuit;
+					thisRound.topBidAmount = thisPlayer.bidAmount;
+					thisRound.topBidPlayer = p;
 				}
-			}
+				
+				//update bid display
+				$('#player-'+p).children('.bid-display').html("(Bid: " + thisRound.playerBids[p] + ")");
+				
+				//check for winning bid || all passed
 
-			//check if bidding is finished
-			if(thisRound.trumpSuit != ""){
-				if(thisRound.trumpSuit != "redeal"){
+				thisRound.passCount = 0;
+				thisRound.bidCount = 0;
+				thisRound.trumpSuit = "";
+				app.log("**checking bid/pass count:");
+				for(var t = 0; t < g.players.length; t++){
+					app.log("Player "+ t + ":" + g.players[t].bidSuit + ":");
+					if(g.players[t].bidSuit == "pass"){
+						thisRound.passCount++;
+					}
+					if(g.players[t].bidSuit != ""){
+						thisRound.bidCount++;
+					}
+				}
+				app.log("Pass count = " + thisRound.passCount + ", Bid count = " + thisRound.bidCount);
+				
+				if(thisRound.passCount > 4){
+					app.log("\r\nAll players passed -> redeal");
 					
-					//convert jacks/joker to bowers/trump suit
-					app.log("\r\nConverting bowers/joker to trump suit....");
+					//TODO: need to display a message to the player.
+					$(".bid-display").each(function(){
+						$(this).html("");
+					});	
+					alert("All players passed. redeal");
 					
-					//check in player hands
-					for(var pl = 0; pl < g.players.length; pl++){
-						thisPlayer = g.players[pl];
-						for(var c = 0; c < thisPlayer.hand.length; c++){
-							thisRound.setBowers(thisPlayer.hand[c]);
+					thisRound.trumpSuit = "redeal";
+				}
+				else if(thisRound.passCount == 4 && thisRound.bidCount == 5){
+					//we have a winning bid
+					
+					app.log("\r\nPlayer " + thisRound.topBidPlayer + " has won the bid.\r\nContract is " + thisRound.topBidAmount + " " + thisRound.topBidSuit);
+
+					thisRound.trumpSuit = thisRound.topBidSuit;
+					thisRound.chief = thisRound.topBidPlayer;
+					
+					if(thisRound.topBidAmount < 8){
+						thisRound.viceLimit = 1;
+					}
+					else{
+						thisRound.viceLimit = 2;
+					}
+				}
+
+				//check if bidding is finished
+				if(thisRound.trumpSuit != ""){
+					if(thisRound.trumpSuit != "redeal"){
+						
+						//convert jacks/joker to bowers/trump suit
+						app.log("\r\nConverting bowers/joker to trump suit....");
+						
+						//check in player hands
+						for(var pl = 0; pl < g.players.length; pl++){
+							thisPlayer = g.players[pl];
+							for(var c = 0; c < thisPlayer.hand.length; c++){
+								thisRound.setBowers(thisPlayer.hand[c]);
+							}
 						}
+						
+						//check in kitty
+						for(var c = 50; c < 53; c++){
+							thisRound.setBowers(g.deck[c]);
+						}
+						
+						//resort the hands
+						app.log("\r\nResorting all hands...");
+						for(var p = 0; p < g.players.length; p++){
+							var thisPlayer = g.players[p];
+							thisPlayer.sortHand("weight");
+						}					
+						
+						//reset seat count to use for play phase
+						thisRound.seatCount = 0;
+						
+						//set trump suit display
+						$('#display-trump-suit').html('Trump Suit: ' + thisRound.trumpSuit);
+						
+						//advance to team selection
+						app.log("bidding is done, move to kitty phase");
+						thisRound.runKittyPhase(g);
+						
 					}
-					
-					//check in kitty
-					for(var c = 50; c < 53; c++){
-						thisRound.setBowers(g.deck[c]);
-					}
-					
-					//resort the hands
-					app.log("\r\nResorting all hands...");
-					for(var p = 0; p < g.players.length; p++){
-						var thisPlayer = g.players[p];
-						thisPlayer.sortHand("weight");
-					}					
-					
-					//reset seat count to use for play phase
-					thisRound.seatCount = 0;
-					
-					//advance to team selection
-					//thisRound.runKittyPhase(g);
-					
+					else{
+						//everyone passed, start a new round
+						app.log("trump suit = redeal, everyone passed. start a new round.");
+						g.thisRound = new app.GameRound(g);
+					}			
 				}
 				else{
-					//everyone passed, start a new round
-					g.thisRound = new app.GameRound(g);
-				}			
+					//continue biding
+					app.log("Continuing the bid...");
+					thisRound.seatCount++;
+					thisRound.runBidPhase(g);
+				}
 			}
-			else{
-				//continue biding
-				app.log("Continuing the bid...");
-				thisRound.seatCount++;
-				thisRound.runBidPhase(g);
-			}
-		
 		}
 
 
@@ -600,6 +587,11 @@ function App_FiveHundred(params) {
 				//Human player, allow player to choose cards to swap and bind submit callback
 				// execute the card swaps in the general card onclick handler based on phase state.
 				
+				//reveal kitty cards
+				//TODO:
+				app.log(">> TODO: reveal kitty cards to player, allow player to choose swaps, submit to continue");
+				
+				//register finished callback
 				$('#btn-kitty-submit').on('click', function(){
 				
 					thisRound.runTeamPhase(g);
@@ -768,8 +760,157 @@ function App_FiveHundred(params) {
 			else{
 			
 				//let the player choose a card
+				app.log(">> waiting for player to choose a card to play");
 				
-				// !!! stub !!!
+				$(function(){
+					$(".card").click(function(e) {
+						if(app.phase == "play" && $(this).hasClass("my-card")){
+						
+							var clickedCardElement = "#" + $(this).attr("id");
+							
+							//Locate card in hand
+							for(var c = 0; c < thisPlayer.hand.length; c++){
+								var thisCard = thisPlayer.hand[c];
+								if(thisCard.eid == clickedCardElement){
+									var playThis = thisCard.toString();
+									var playCard = thisCard;
+									var cardIndex = c;
+									app.log("Player chose to play " + playCard.toString());
+									app.log("Card located in hand at " + cardIndex);
+								}
+							}
+							
+							//verify that card is allowed (lead suit / trump available)
+							var playAllowed = true;
+							//TODO:
+							
+							if(playAllowed){
+							
+								//get playStatus
+								checkVal = playCard.value;
+								checkSuit = playCard.suit;
+								playStatus = "throw under";
+								
+								//Did anyone throw a trump?
+								if(thisTrick.trumpInPlay(thisRound.trumpSuit) == true){
+								
+									app.log("Trump is in play");
+									
+									//Did I throw a trump?
+									if(checkSuit == thisRound.trumpSuit){
+										
+										app.log("I threw trump");
+										
+										//Do I have top in trump?
+										if(checkVal >= thisTrick.topValue){
+											app.log("My trump wins, I am new on top");
+											playStatus = "new on top";
+										}
+										else{
+											app.log("My trump was beaten");
+											playStatus = "throw under";
+										}
+										
+									}
+									else{
+										app.log("I was trumped");
+										playStatus = "throw under";
+									}
+									
+								}
+								else{
+									
+									//no trumps thrown, did I start the trick?
+									if(thisTrick.leadSuit == ""){
+										app.log("I lead the trick, I am new on top");
+										playStatus = "new on top";
+									}
+									else{
+										
+										//did not lead, did I play in lead suit?
+										if(checkSuit == thisTrick.leadSuit){
+											app.log("I played in the lead suit, no trumps in play");
+											
+											//Do I have top in lead suit?
+											if(checkVal >= thisTrick.topValue){
+												app.log("I have the highest in trick, I am new on top");
+												playStatus = "new on top";
+											}
+											else{
+												app.log("I was beaten");
+												playStatus = "throw under";
+											}
+											
+										}
+										else if(checkSuit == thisRound.trumpSuit){
+											app.log("I threw a trump, no other trumps in play, I am new on top");
+											playStatus = "new on top";
+										}
+										else{
+											app.log("I played a non-trump off-suit");
+											playStatus = "throw under";
+										}
+										
+									}
+									
+								}
+								
+								//play card to trick
+								thisTrick.playedThisTrick[thisPlayer.id] = playThis;
+								
+								var t = "";
+								for(var p in thisTrick.playedThisTrick){
+									t += thisTrick.playedThisTrick[p] + ",";
+								}
+								app.log("Cards now in play: " + t);
+								
+								//update top status
+								if(playStatus == "new on top"){
+									thisTrick.topPlayer = thisPlayer.id;
+									thisTrick.topSuit = playCard.suit;
+									thisTrick.topValue = playCard.value;
+									app.log("Player " + thisPlayer.id + " now holds the trick");
+								}
+								
+								//update lead suit
+								if(thisTrick.leadSuit == ""){
+									thisTrick.leadSuit = playCard.suit;
+									app.log("Lead suit is now " + thisTrick.leadSuit);
+								}
+								
+								//update top in suit
+								// !!! This needs to recursively check that the next card down has not previously been played.
+								// !!! Top in Suit needs to be updated only after trick is complete !!! move this to updatePlayPhase and iterate through all playedToTrick cards
+								if(playCard.toString() == thisRound.topInSuit[playCard.suit]){
+									thisRound.topInSuit[playCard.suit] = playCard.getNextCard(-1);
+									app.log("New top " + playCard.suit + " is " + thisRound.topInSuit[playCard.suit]);
+								}
+								
+								//update out of suit
+								if(playCard.suit != thisTrick.leadSuit){
+									thisRound.outOfSuit[thisTrick.leadSuit][thisPlayer.id] = true;
+									app.log("Player " + thisPlayer.id + " is out of " + thisTrick.leadSuit);
+								}
+								
+								//remove card from hand
+								thisPlayer.hand.splice(cardIndex, 1);
+								
+								//move to table
+								var tCard = '#card-'+playCard.suit.substr(0, 1) + playCard.value;
+								app.pasteCard(tCard, "#in-play", 430, 194);
+								app.flipCard(tCard, "up");
+								$(tCard).removeClass("my-card");
+								$(tCard).addClass("card-in-play");
+
+								//resort hand to close gap
+								thisPlayer.sortHand("weight");
+								
+								thisRound.updatePlayPhase(g, thisTrick);
+							}
+							
+						}
+					});
+				});					
 				
 			}	
 			
@@ -778,103 +919,120 @@ function App_FiveHundred(params) {
 
 
 		this.updatePlayPhase = function(g, t){
-			
-			app.log("update play: trick "+thisRound.trickCount + " seat: " + thisRound.seatCount);
-			
-			//check if trick is complete
-			if(thisRound.seatCount >= 4){
-			
-				//check if round is complete
-				if(thisRound.trickCount < 10){
-					
-					//trick is complete but round not finished
-					app.log("trick is complete, but round continues");
-					app.log("player " + t.topPlayer + " took the trick");
-					
-					//process trick results
-					g.players[t.topPlayer].tricks++;
-					thisRound.nextLeadPlayer = t.topPlayer;
-					
-					//start a new trick
-					app.log("\r\nStarting Trick " + (thisRound.trickCount + 1));
-					
-					t = new app.Trick();
-					thisRound.trickCount++;
-					
-					t.leadPlayer = thisRound.nextLeadPlayer;
-					
-					app.log("Player " + t.leadPlayer + " leads the trick");					
-					
-					thisRound.seatCount = 0;
-					thisRound.runPlayPhase(g, t);
+			if(app.phase == "play"){
+				app.log("update play: trick "+thisRound.trickCount + " seat: " + thisRound.seatCount);
 				
-				}
-				else{
-					
-					//round is complete, update score and check for winner
-					
-					var winners = [];
-					
-					//did chief meet the contract?
-					var teamTricks = g.players[thisRound.chief].tricks;
-					if(thisRound.vice1 > -1){ teamTricks += g.players[thisRound.vice1].tricks; }
-					if(thisRound.vice2 > -1){ teamTricks += g.players[thisRound.vice2].tricks; }
-					app.log("\r\nChief's team took " + teamTricks + " tricks");
-					
-					//get team point change
-					var pointChange = thisRound.getBidPoints(thisRound.topBidSuit, thisRound.topBidAmount);
-					if(teamTricks < thisRound.topBidAmount){
-						pointChange = pointChange * -1; //chief was set
-					}
-					
-					//update score, all on team will +/- by contract, individuals will +10 per trick taken
-					for(var p = 0; p < 5; p++){
+				//check if this is the first card of the trick
+				if(thisRound.seatCount == 0){
+					//set lead suit display
+					$('#display-lead-suit').html('Lead Suit: ' + t.leadSuit);
+				}				
+				
+				//check if trick is complete
+				if(thisRound.seatCount >= 4){
+				
+					//check if round is complete
+					if(thisRound.trickCount < 10){
 						
-						if(p == thisRound.chief || p == thisRound.vice1 || p == thisRound.vice2){
-							g.players[p].score += pointChange;
-						}
-						else{
-							g.players[p].score += g.players[p].tricks * 10;
-						}
+						//trick is complete but round not finished
+						app.log("trick is complete, but round continues");
+						app.log("player " + t.topPlayer + " took the trick");
 						
-						//check for win
-						if(g.players[p].score >= 500){
-							winners.push("Player "+p);
-						}
+						//process trick results
+						g.players[t.topPlayer].tricks++;
+						thisRound.nextLeadPlayer = t.topPlayer;
 						
-						app.log("Player " + p + " score: " + g.players[p].score);
+						//remove cards from field
+						$(".card-in-play").each(function(){
+							$(this).removeClass("card-in-play");
+							$(this).addClass("card-has-played");
+							$(this).hide();
+						});
+
+						//TODO: show stack on winning player
 						
-					}
-					
-					//Does the game continue?
-					if(winners.length){
+						$('#display-lead-suit').html('Lead Suit:');
 						
-						//we have a winner, game is over
+						//start a new trick
+						app.log("\r\nStarting Trick " + (thisRound.trickCount + 1));
 						
-						app.log("\r\nGame is complete in " + g.roundCount + " rounds.\r\n");
-						//break;
+						t = new app.Trick();
+						thisRound.trickCount++;
 						
-						//display winners and offer to start a new game
+						t.leadPlayer = thisRound.nextLeadPlayer;
 						
-						// !!! stub !!!
+						app.log("Player " + t.leadPlayer + " leads the trick");					
+						
+						thisRound.seatCount = 0;
+						thisRound.runPlayPhase(g, t);
 						
 					}
 					else{
-						//start another round
-						app.log("\r\nNo winner, start a new round\r\n");
-						g.thisRound = new app.GameRound(g);
+						
+						//round is complete, update score and check for winner
+						
+						var winners = [];
+						
+						//did chief meet the contract?
+						var teamTricks = g.players[thisRound.chief].tricks;
+						if(thisRound.vice1 > -1){ teamTricks += g.players[thisRound.vice1].tricks; }
+						if(thisRound.vice2 > -1){ teamTricks += g.players[thisRound.vice2].tricks; }
+						app.log("\r\nChief's team took " + teamTricks + " tricks");
+						
+						//get team point change
+						var pointChange = thisRound.getBidPoints(thisRound.topBidSuit, thisRound.topBidAmount);
+						if(teamTricks < thisRound.topBidAmount){
+							pointChange = pointChange * -1; //chief was set
+						}
+						
+						//update score, all on team will +/- by contract, individuals will +10 per trick taken
+						for(var p = 0; p < 5; p++){
+							
+							if(p == thisRound.chief || p == thisRound.vice1 || p == thisRound.vice2){
+								g.players[p].score += pointChange;
+							}
+							else{
+								g.players[p].score += g.players[p].tricks * 10;
+							}
+							
+							//check for win
+							if(g.players[p].score >= 500){
+								winners.push("Player "+p);
+							}
+							
+							app.log("Player " + p + " score: " + g.players[p].score);
+							
+						}
+						
+						//Does the game continue?
+						if(winners.length){
+							
+							//we have a winner, game is over
+							
+							app.log("\r\nGame is complete in " + g.roundCount + " rounds.\r\n");
+							//break;
+							
+							//display winners and offer to start a new game
+							
+							// !!! stub !!!
+							
+						}
+						else{
+							//start another round
+							app.log("\r\nNo winner, start a new round\r\n");
+							g.thisRound = new app.GameRound(g);
+						}
+						
 					}
 					
 				}
-				
-			}
-			else{
-				//advance the seat and continue the trick
-				thisRound.seatCount++;
-				app.log("trick continues with seat " + thisRound.seatCount);
-				thisRound.runPlayPhase(g, t);
-			}
-					
+				else{
+					//advance the seat and continue the trick
+					thisRound.seatCount++;
+					app.log("trick continues with seat " + thisRound.seatCount);
+					thisRound.runPlayPhase(g, t);
+				}
+			}		
 		}
 
 
@@ -1260,13 +1418,21 @@ function App_FiveHundred(params) {
 					var posx = 8 + (15 * c);
 					var posy = 68 + (1 * c);
 					app.flipCard(thisCard.eid, "down"); 
+					$(thisCard.eid).removeClass("my-card");
+					$(thisCard.eid).removeClass("card-in-play");
+					$(thisCard.eid).removeClass("card-has-played");
 				}
 				else{
 					var posx = 10 + ((cardElement.width() + 13) * c);
 					var posy = 74;				
+					app.flipCard(thisCard.eid, "up");
+					$(thisCard.eid).addClass("my-card");
+					$(thisCard.eid).removeClass("card-in-play");
+					$(thisCard.eid).removeClass("card-has-played");					
 				}
 				
 				app.pasteCard(thisCard.eid, "#player-"+thisPlayer.id, posx, posy);
+				
 			}
 			
 		}
@@ -2161,6 +2327,15 @@ function App_FiveHundred(params) {
 				//remove card from hand
 				thisPlayer.hand.splice(cardIndex, 1);
 				
+				//move to table
+				var tCard = '#card-'+playCard.suit.substr(0, 1) + playCard.value;
+				app.pasteCard(tCard, "#in-play", 60 + thisPlayer.id * 240, 30);
+				app.flipCard(tCard, "up");
+				$(tCard).removeClass("my-card");
+				$(tCard).addClass("card-in-play");
+				
+				//resort hand to close gap
+				if(thisPlayer.ai != "Human"){ thisPlayer.sortHand("count"); }
 			}
 			
 		}
@@ -2378,7 +2553,7 @@ function App_FiveHundred(params) {
 	
 	
 	this.pasteCard = function(c, e, x, y){
-		
+		//alert("pasting card " + c + " to element " + e + " at coords " + x + "," + y);
 		var ce = $(c);
 		
 		//fade out
